@@ -418,31 +418,47 @@ function flashTitle(song) {
 async function showSong(song) {
   const my = ++playToken;
   $('tapPlay').classList.add('hidden');
-  if (player) { try { player.destroy(); } catch {} player = null; }
-  const box = $('playerContainer'); box.innerHTML = '';
-  if (!song) { $('titleBar').classList.replace('opacity-100', 'opacity-0'); return; }
+  if (!song) {
+    $('titleBar').classList.replace('opacity-100', 'opacity-0');
+    if (player && player.stopVideo) { try { player.stopVideo(); } catch {} }
+    return;
+  }
   const id = videoId(song.url);
   if (!id) { toast('ลิงก์เพลงไม่ถูกต้อง ข้ามไปเพลงถัดไป'); setTimeout(() => my === playToken && skipSong(), 1500); return; }
-  box.innerHTML = '<div id="ytTarget" class="w-full h-full"></div>';
   flashTitle(song);
   guard(set(ref(db, `rooms/${roomId}/history/${id}`), { title: song.title, vid: id, ts: Date.now() }));
   await loadYT();
   if (my !== playToken) return;
-  player = new YT.Player('ytTarget', {
-    width: '100%', height: '100%', videoId: id,
-    playerVars: { autoplay: 1, cc_load_policy: ccEnabled ? 1 : 0, cc_lang_pref: 'th', controls: 0, rel: 0, playsinline: 1, modestbranding: 1, iv_load_policy: 3, disablekb: 1, fs: 0 },
-    events: {
-      onReady: e => autoPlayStart(e, my, true),
-      onStateChange: e => {
-        if (e.data === 1) {
-          if (!player.isMuted()) $('tapPlay').classList.add('hidden');
+  
+  if (!player) {
+    const box = $('playerContainer'); box.innerHTML = '<div id="ytTarget" class="w-full h-full"></div>';
+    player = new YT.Player('ytTarget', {
+      width: '100%', height: '100%', videoId: id,
+      playerVars: { autoplay: 1, cc_load_policy: ccEnabled ? 1 : 0, cc_lang_pref: 'th', controls: 0, rel: 0, playsinline: 1, modestbranding: 1, iv_load_policy: 3, disablekb: 1, fs: 0 },
+      events: {
+        onReady: e => {
+          e.target.unMute();
+          e.target.setVolume(100);
+          e.target.playVideo();
           applyCC();
-        }
-        if (e.data === 0 && my === playToken) skipSong();
-      },
-      onError: () => { if (my !== playToken) return; toast('เพลงนี้เล่นไม่ได้ ข้ามไปเพลงถัดไป'); setTimeout(() => my === playToken && skipSong(), 2000); }
+        },
+        onStateChange: e => {
+          if (e.data === 1) applyCC();
+          if (e.data === 0 && my === playToken) skipSong();
+        },
+        onError: () => { if (my !== playToken) return; toast('เพลงนี้เล่นไม่ได้ ข้ามไปเพลงถัดไป'); setTimeout(() => my === playToken && skipSong(), 2000); }
+      }
+    });
+  } else {
+    try {
+      player.loadVideoById(id);
+      player.unMute();
+      player.setVolume(100);
+      applyCC();
+    } catch {
+      // fallback if loadVideoById fails
     }
-  });
+  }
 }
 const cid = (() => { try { let v = localStorage.getItem('karaokeCid'); if (!v) { v = Math.random().toString(36).slice(2, 10); localStorage.setItem('karaokeCid', v); } return v; } catch { return Math.random().toString(36).slice(2, 10); } })();
 onValue(ref(db, `rooms/${roomId}/mode`), snap => {
@@ -467,7 +483,7 @@ onValue(ref(db, `rooms/${roomId}/quiz`), snap => {
   if (isMain) { quizMainSync(prev); renderQuizMain(); } else renderQuizPhone();
 }, dbErr);
 
-function killPlayer() { playToken++; if (player) { try { player.destroy(); } catch {} player = null; } $('playerContainer').innerHTML = ''; $('tapPlay').classList.add('hidden'); }
+function killPlayer() { playToken++; if (player && player.stopVideo) { try { player.stopVideo(); } catch {} } $('tapPlay').classList.add('hidden'); }
 function applyMode() {
   if (!isMain) return;
   killPlayer();
@@ -476,25 +492,43 @@ function applyMode() {
   renderQuizMain(); updateIdle();
 }
 async function playQuizRound(r) {
-  killPlayer(); const my = playToken;
-  $('playerContainer').innerHTML = '<div id="ytTarget" class="w-full h-full"></div>';
+  const my = ++playToken;
+  $('tapPlay').classList.add('hidden');
   await loadYT();
   if (my !== playToken) return;
-  player = new YT.Player('ytTarget', {
-    width: '100%', height: '100%', videoId: r.vid,
-    playerVars: { autoplay: 1, start: r.start, cc_load_policy: ccEnabled ? 1 : 0, cc_lang_pref: 'th', controls: 0, rel: 0, playsinline: 1, modestbranding: 1, iv_load_policy: 3, disablekb: 1, fs: 0 },
-    events: {
-      onReady: e => autoPlayStart(e, my, false),
-      onStateChange: e => {
-        if (e.data === 1) {
-          if (!player.isMuted()) $('tapPlay').classList.add('hidden');
+  
+  if (!player) {
+    const box = $('playerContainer'); box.innerHTML = '<div id="ytTarget" class="w-full h-full"></div>';
+    player = new YT.Player('ytTarget', {
+      width: '100%', height: '100%', videoId: r.vid,
+      playerVars: { autoplay: 1, start: r.start, cc_load_policy: ccEnabled ? 1 : 0, cc_lang_pref: 'th', controls: 0, rel: 0, playsinline: 1, modestbranding: 1, iv_load_policy: 3, disablekb: 1, fs: 0 },
+      events: {
+        onReady: e => {
+          e.target.unMute();
+          e.target.setVolume(100);
+          e.target.seekTo(r.start, true);
+          e.target.playVideo();
           applyCC();
-        }
-        if (e.data === 0 && quiz.round && quiz.round.status !== 'revealed') { try { player.seekTo(quiz.round.start, true); player.playVideo(); } catch {} }
-      },
-      onError: () => toast('เพลงนี้เล่นไม่ได้ ให้แอดมินสุ่มเพลงใหม่')
+        },
+        onStateChange: e => {
+          if (e.data === 1) applyCC();
+          if (e.data === 0 && quiz.round && quiz.round.status !== 'revealed') { try { player.seekTo(quiz.round.start, true); player.playVideo(); } catch {} }
+        },
+        onError: () => toast('เพลงนี้เล่นไม่ได้ ให้แอดมินสุ่มเพลงใหม่')
+      }
+    });
+  } else {
+    try {
+      player.loadVideoByUrl({ mediaContentUrl: `https://www.youtube.com/watch?v=${r.vid}`, startSeconds: r.start });
+      player.unMute();
+      player.setVolume(100);
+      applyCC();
+    } catch {
+      try {
+        player.loadVideoById({ videoId: r.vid, startSeconds: r.start });
+      } catch {}
     }
-  });
+  }
 }
 function quizMainSync(prev) {
   if (mode !== 'quiz') return;
