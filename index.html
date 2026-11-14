@@ -30,6 +30,21 @@
     <a href="https://www.youtube.com/" target="_blank" rel="noopener" class="text-xs text-slate-400 underline">มี YouTube Premium? ล็อกอินในเบราว์เซอร์นี้ก่อนเพื่อดูแบบไม่มีโฆษณา ↗</a>
     <button id="startBtn" onclick="userStart()" class="px-8 py-3 bg-gradient-to-r from-pink-500 to-purple-600 rounded-2xl text-lg font-semibold shadow-xl">▶ แตะเพื่อเริ่ม (เต็มจอ)</button>
   </div>
+  <div id="quizCover" class="hidden absolute inset-0 z-[15] bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 flex flex-col items-center justify-center text-center p-8">
+    <p id="qcRound" class="text-pink-400 font-semibold text-xl md:text-2xl mb-2">🎯 ทายเพลง</p>
+    <div id="qcIcon" class="text-8xl md:text-9xl mb-4 animate-bounce">🎵</div>
+    <h2 id="qcText" class="text-3xl md:text-6xl font-black text-white"></h2>
+    <p id="qcSub" class="text-slate-300 text-lg md:text-2xl mt-3"></p>
+  </div>
+  <div id="quizHud" class="hidden absolute top-4 left-4 z-[25] w-60 md:w-80 space-y-3">
+    <div class="bg-black/60 backdrop-blur rounded-2xl p-3"><p class="text-xs text-amber-400 font-bold mb-1">⚡ ลำดับการกด</p><div id="hudBuzz" class="space-y-1 text-sm md:text-base"></div></div>
+    <div class="bg-black/60 backdrop-blur rounded-2xl p-3"><p class="text-xs text-amber-400 font-bold mb-1">🏆 คะแนน</p><div id="hudScores" class="space-y-1 text-sm md:text-base"></div></div>
+  </div>
+  <div id="quizBanner" class="hidden absolute inset-x-0 bottom-0 z-[25] p-6 md:p-10 bg-gradient-to-t from-black/90 to-transparent">
+    <p class="text-emerald-400 font-semibold md:text-xl">✅ เฉลย</p>
+    <h2 id="qbTitle" class="text-white font-black text-3xl md:text-5xl"></h2>
+    <p id="qbSub" class="text-slate-300 text-lg md:text-2xl mt-1"></p>
+  </div>
   <button id="fsBtn" onclick="goFullscreen()" class="hidden absolute top-4 right-4 z-40 px-4 py-2 bg-black/60 hover:bg-black/80 text-white rounded-xl text-sm backdrop-blur">⛶ เต็มจอ</button>
   <button id="tapPlay" onclick="userStart()" class="hidden absolute inset-0 m-auto w-fit h-fit px-8 py-4 bg-pink-600 rounded-2xl text-xl font-semibold shadow-2xl z-40">▶ แตะเพื่อเริ่มเล่น</button>
 </div>
@@ -48,19 +63,19 @@
         <button onclick="shareRoom()" class="px-2 bg-slate-800 rounded-lg text-xs">🔗</button>
       </div>
     </div>
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 space-y-2">
+    <div class="k-only bg-slate-900 border border-slate-800 rounded-2xl p-3 space-y-2">
       <div class="flex items-center gap-2">
         <div class="min-w-0 flex-1"><p class="text-[10px] text-pink-400 font-semibold">กำลังเล่นบนจอ</p><p id="npTitle" class="text-sm font-semibold truncate">ยังไม่มีเพลง</p></div>
         <button id="pauseBtn" onclick="togglePause()" class="w-11 h-11 bg-slate-800 rounded-xl text-lg">⏸</button>
         <button onclick="skipSong()" class="w-11 h-11 bg-slate-800 rounded-xl text-lg">⏭</button>
       </div>
     </div>
-    <div class="flex gap-2">
+    <div class="k-only flex gap-2">
       <input id="q" placeholder="ค้นหาเพลง หรือวางลิงก์ YouTube" class="flex-1 min-w-0 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-pink-500">
       <button onclick="doSearch()" class="px-4 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl text-sm font-medium">ค้นหา</button>
     </div>
-    <label class="flex items-center gap-2 text-xs text-slate-400"><input type="checkbox" id="kar" checked class="accent-pink-500"> เติมคำว่า "คาราโอเกะ" ให้อัตโนมัติ</label>
-    <div class="grid grid-cols-5 gap-1 text-[11px]">
+    <label class="k-only flex items-center gap-2 text-xs text-slate-400"><input type="checkbox" id="kar" checked class="accent-pink-500"> เติมคำว่า "คาราโอเกะ" ให้อัตโนมัติ</label>
+    <div class="k-only grid grid-cols-5 gap-1 text-[11px]">
       <button data-tab="search" onclick="tab('search')">🔍 ค้นหา</button>
       <button data-tab="chart" onclick="tab('chart')">📈 ชาร์ต</button>
       <button data-tab="queue" onclick="tab('queue')" id="tabQueue">🎶 คิว</button>
@@ -68,12 +83,19 @@
       <button data-tab="control" onclick="tab('control')">🎛 ควบคุม</button>
     </div>
   </div>
-  <div class="p-3 pb-20">
+  <div class="k-only p-3 pb-20">
     <div id="pane-search" class="space-y-2"><p class="text-center text-xs text-slate-500 py-8">พิมพ์ชื่อเพลงแล้วกดค้นหา</p></div>
     <div id="pane-chart" class="hidden space-y-2"></div>
     <div id="pane-queue" class="hidden space-y-2"></div>
     <div id="pane-hist" class="hidden space-y-2"></div>
     <div id="pane-control" class="hidden space-y-3">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 space-y-2">
+        <p class="text-xs text-slate-400">โหมดเกม</p>
+        <div class="grid grid-cols-2 gap-1.5">
+          <button class="mode-btn" data-mode="karaoke" onclick="setMode('karaoke')">🎤 คาราโอเกะ</button>
+          <button class="mode-btn" data-mode="quiz" onclick="setMode('quiz')">🎯 ทายเพลง</button>
+        </div>
+      </div>
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 space-y-2">
         <p class="text-xs text-slate-400">เลื่อนเวลาเพลง</p>
         <div class="flex items-center gap-2 text-[11px] text-slate-400">
@@ -107,13 +129,50 @@
       </div>
     </div>
   </div>
+  <div id="quizUI" class="hidden p-3 pb-20 space-y-3">
+    <div class="grid grid-cols-2 gap-1.5">
+          <button class="mode-btn" data-mode="karaoke" onclick="setMode('karaoke')">🎤 คาราโอเกะ</button>
+          <button class="mode-btn" data-mode="quiz" onclick="setMode('quiz')">🎯 ทายเพลง</button>
+        </div>
+    <div id="qStatus" class="text-center text-sm font-semibold bg-slate-900 border border-slate-800 rounded-2xl p-3"></div>
+    <div id="qPlayer">
+      <button id="buzzBtn" onclick="buzz()" class="w-full h-44 rounded-3xl bg-gradient-to-b from-rose-500 to-red-700 text-3xl font-black shadow-xl shadow-red-900/50 active:scale-95 transition disabled:opacity-40">🔔 BUZZ!</button>
+    </div>
+    <div id="qAdmin" class="hidden space-y-2 bg-slate-900 border border-amber-500/30 rounded-2xl p-3">
+      <p class="text-xs text-amber-400 font-semibold">👑 แอดมิน (เห็นเฉพาะคุณ)</p>
+      <p id="qSecret" class="text-[11px] text-slate-300 break-words"></p>
+      <button onclick="quizNext()" class="w-full py-3 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl font-semibold text-sm">🎲 สุ่มเพลงถัดไป (จากชาร์ต YouTube)</button>
+      <div class="grid grid-cols-4 gap-1.5 text-xs">
+        <button onclick="sendCmd('pause')" class="py-2 bg-slate-800 rounded-lg">⏸</button>
+        <button onclick="sendCmd('play')" class="py-2 bg-slate-800 rounded-lg">▶</button>
+        <button onclick="sendCmd('seekBy',-10)" class="py-2 bg-slate-800 rounded-lg">⏪ 10</button>
+        <button onclick="sendCmd('seekBy',10)" class="py-2 bg-slate-800 rounded-lg">10 ⏩</button>
+      </div>
+      <div class="grid grid-cols-2 gap-1.5 text-xs">
+        <button onclick="sendCmd('qreplay')" class="py-2 bg-slate-800 rounded-lg">🔁 เล่นจากจุดเริ่ม</button>
+        <button onclick="sendCmd('qrand')" class="py-2 bg-slate-800 rounded-lg">🎯 สุ่มจุดเริ่มใหม่</button>
+      </div>
+      <div class="grid grid-cols-2 gap-1.5 text-sm">
+        <button onclick="quizResetBuzz()" class="py-2.5 bg-amber-500 text-slate-950 font-semibold rounded-xl">🔄 รีเซ็ต Buzz</button>
+        <button onclick="quizReveal()" class="py-2.5 bg-emerald-600 font-semibold rounded-xl">👁 เฉลย</button>
+      </div>
+      <div class="grid grid-cols-3 gap-1.5 text-xs">
+        <button onclick="sfx('clap')" class="py-2 bg-slate-800 rounded-lg">👏 ปรบมือ</button>
+        <button onclick="sfx('drum')" class="py-2 bg-slate-800 rounded-lg">🥁 กลองรัว</button>
+        <button onclick="quizResetScores()" class="py-2 bg-slate-800 text-red-400 rounded-lg">🗑 ล้างคะแนน</button>
+      </div>
+    </div>
+    <button id="qClaim" onclick="claimAdmin()" class="hidden w-full text-[11px] text-slate-500 py-1">👑 ขอเป็นแอดมิน</button>
+    <div><p class="text-xs text-slate-400 mb-1">⚡ ลำดับการกด</p><div id="qBuzz" class="space-y-1.5"></div></div>
+    <div><p class="text-xs text-slate-400 mb-1">🏆 คะแนน</p><div id="qScores" class="space-y-1.5"></div></div>
+  </div>
 </div>
 
 <div id="toast" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-slate-800 border border-slate-700 text-sm px-4 py-2 rounded-xl shadow-2xl max-w-[90vw] text-center"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, push, remove, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, push, remove, runTransaction, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 /* ======= ตั้งค่า ======= */
 const YT_API_KEY = 'AIzaSyBI8LB_SVdGZXsDRb5YVYzqy7KZJAQtjoo';   // <-- ใส่ YouTube Data API v3 key ที่นี่ (ดูวิธีสร้างในคำอธิบาย)
@@ -172,7 +231,7 @@ const sfxRef = ref(db, `rooms/${roomId}/sfx`);
 const posRef = ref(db, `rooms/${roomId}/pos`);
 const histRef = ref(db, `rooms/${roomId}/history`);
 
-let queue = [], currentSong = null, paused = false, queueLoaded = false, stateLoaded = false, pos = { t: 0, d: 0 }, seeking = false;
+let queue = [], currentSong = null, paused = false, queueLoaded = false, stateLoaded = false, pos = { t: 0, d: 0 }, seeking = false, mode = 'karaoke', modeLoaded = false, quiz = { adminId: null, round: null, buzz: [], scores: [] };
 
 $(isMain ? 'mainView' : 'phoneView').classList.remove('hidden');
 $('roomLabel').textContent = '#' + roomId;
@@ -194,7 +253,7 @@ onValue(stateRef, snap => {
   const sig = x => x ? `${x.id || ''}|${x.url || ''}` : '';
   const changed = sig(next) !== sig(currentSong);
   currentSong = next; paused = !!(s && s.paused); stateLoaded = true;
-  if (isMain) { if (changed) showSong(next); else applyPause(); updateIdle(); maybeAdvance(); }
+  if (isMain) { if (modeLoaded && mode !== 'quiz') { if (changed) showSong(next); else applyPause(); } updateIdle(); maybeAdvance(); }
   else { if (changed) pos = { t: 0, d: 0 }; updateNow(); updateSeek(); }
 }, dbErr);
 
@@ -206,7 +265,7 @@ onValue(reactionRef, snap => {
 });
 
 /* ======= การเล่น / คิว (ใช้ร่วมกัน) ======= */
-function maybeAdvance() { if (isMain && queueLoaded && stateLoaded && !currentSong && queue.length) advance(); }
+function maybeAdvance() { if (isMain && modeLoaded && mode !== 'quiz' && queueLoaded && stateLoaded && !currentSong && queue.length) advance(); }
 async function advance() {
   const next = queue[0]; if (!next) return;
   try {
@@ -232,7 +291,7 @@ let player = null, playToken = 0, ytPromise = null, started = false, peek = fals
   try { const q = qrcode(0, 'M'); q.addData(phoneLink); q.make(); $('qrBig').innerHTML = q.createSvgTag({ scalable: true }); } catch { $('qrBig').textContent = phoneLink; }
   if (location.protocol === 'file:') toast('เปิดจากไฟล์ในเครื่อง YouTube/มือถืออาจใช้ไม่ได้ ให้เปิดผ่านเว็บโฮสต์');
   $('mainView').addEventListener('click', e => {           // แตะจอ = โชว์ QR ชั่วคราว ให้คนมาใหม่สแกน
-    if (!started || !currentSong || e.target.closest('button')) return;
+    if (!started || (!currentSong && mode !== 'quiz') || e.target.closest('button')) return;
     peek = !peek; clearTimeout(peekTimer); if (peek) peekTimer = setTimeout(() => { peek = false; updateIdle(); }, 10000);
     updateIdle();
   });
@@ -240,9 +299,9 @@ let player = null, playToken = 0, ytPromise = null, started = false, peek = fals
 
 function updateIdle() {
   if (!isMain) return;
-  $('idleScreen').classList.toggle('hidden', started && !!currentSong && !peek);
+  $('idleScreen').classList.toggle('hidden', started && !peek && (mode === 'quiz' || !!currentSong));
   $('startBtn').classList.toggle('hidden', started);
-  $('idleHint').textContent = currentSong ? `กำลังเล่น: ${currentSong.title}` : (queue.length ? 'กำลังโหลดเพลง...' : 'ยังไม่มีเพลงในคิว เพิ่มเพลงจากมือถือได้เลย');
+  $('idleHint').textContent = mode === 'quiz' ? 'โหมดทายเพลง รอแอดมินเริ่มรอบแรก' : currentSong ? `กำลังเล่น: ${currentSong.title}` : (queue.length ? 'กำลังโหลดเพลง...' : 'ยังไม่มีเพลงในคิว เพิ่มเพลงจากมือถือได้เลย');
 }
 window.goFullscreen = async () => { try { await document.documentElement.requestFullscreen(); } catch { toast('เบราว์เซอร์ไม่อนุญาตให้เต็มจอ ลองกด F11'); } };
 function updateFs() { $('fsBtn').classList.toggle('hidden', !isMain || !started || !!document.fullscreenElement); }
@@ -306,6 +365,79 @@ async function showSong(song) {
     }
   });
 }
+const cid = (() => { try { let v = localStorage.getItem('karaokeCid'); if (!v) { v = Math.random().toString(36).slice(2, 10); localStorage.setItem('karaokeCid', v); } return v; } catch { return Math.random().toString(36).slice(2, 10); } })();
+onValue(ref(db, `rooms/${roomId}/mode`), snap => {
+  const m = snap.val() === 'quiz' ? 'quiz' : 'karaoke';
+  const changed = !modeLoaded || m !== mode;
+  mode = m; modeLoaded = true;
+  if (isMain) { if (changed) applyMode(); } else renderModeUI();
+  maybeAdvance();
+}, dbErr);
+onValue(ref(db, `rooms/${roomId}/quiz`), snap => {
+  const v = snap.val() || {}, now = Date.now(), prev = quiz;
+  quiz = {
+    adminId: v.adminId || null, round: v.round || null,
+    buzz: Object.entries(v.buzz || {}).map(([id, b]) => ({ id, ...b })).sort((a, b) => (a.ts || now) - (b.ts || now)),
+    scores: Object.entries(v.scores || {}).map(([id, s]) => ({ id, ...s })).sort((a, b) => b.score - a.score)
+  };
+  if (isMain) { quizMainSync(prev); renderQuizMain(); } else renderQuizPhone();
+}, dbErr);
+
+function killPlayer() { playToken++; if (player) { try { player.destroy(); } catch {} player = null; } $('playerContainer').innerHTML = ''; $('tapPlay').classList.add('hidden'); }
+function applyMode() {
+  if (!isMain) return;
+  killPlayer();
+  if (mode === 'quiz') { $('titleBar').classList.replace('opacity-100', 'opacity-0'); if (quiz.round) playQuizRound(quiz.round); }
+  else showSong(currentSong);
+  renderQuizMain(); updateIdle();
+}
+async function playQuizRound(r) {
+  killPlayer(); const my = playToken;
+  $('playerContainer').innerHTML = '<div id="ytTarget" class="w-full h-full"></div>';
+  await loadYT();
+  if (my !== playToken) return;
+  player = new YT.Player('ytTarget', {
+    width: '100%', height: '100%', videoId: r.vid,
+    playerVars: { autoplay: 1, start: r.start, cc_load_policy: 0, controls: 0, rel: 0, playsinline: 1, modestbranding: 1, iv_load_policy: 3, disablekb: 1, fs: 0 },
+    events: {
+      onReady: e => { e.target.playVideo(); hideCC(); setTimeout(() => {
+        if (my !== playToken) return;
+        try { const st = player.getPlayerState(); if (st !== 1 && st !== 3) $('tapPlay').classList.remove('hidden'); } catch {}
+      }, 2500); },
+      onStateChange: e => {
+        if (e.data === 1) { $('tapPlay').classList.add('hidden'); hideCC(); }
+        if (e.data === 0 && quiz.round && quiz.round.status !== 'revealed') { try { player.seekTo(quiz.round.start, true); player.playVideo(); } catch {} }   // ยังไม่เฉลย -> วนช่วงเดิม
+      },
+      onError: () => toast('เพลงนี้เล่นไม่ได้ ให้แอดมินสุ่มเพลงใหม่')
+    }
+  });
+}
+function quizMainSync(prev) {
+  if (mode !== 'quiz') return;
+  const r = quiz.round;
+  if (!r) { if (prev.round) killPlayer(); return; }
+  if (!prev.round || prev.round.n !== r.n) { playQuizRound(r); return; }
+  if (prev.round.status !== 'revealed' && r.status === 'revealed') { try { player.playVideo(); } catch {} return; }
+  if (r.status === 'playing') {
+    if (!prev.buzz.length && quiz.buzz.length) { try { player.pauseVideo(); } catch {} if (started) { try { getAC(); SFX.ding(); } catch {} } }
+    else if (prev.buzz.length && !quiz.buzz.length) { try { player.playVideo(); } catch {} }
+  }
+}
+function renderQuizMain() {
+  const on = mode === 'quiz', r = quiz.round, rev = !!r && r.status === 'revealed';
+  $('quizHud').classList.toggle('hidden', !on);
+  $('quizCover').classList.toggle('hidden', !on || rev);
+  $('quizBanner').classList.toggle('hidden', !on || !rev);
+  if (!on) return;
+  if (rev) { $('qbTitle').textContent = r.title; $('qbSub').textContent = r.channel || ''; }
+  $('qcRound').textContent = r ? `🎯 ทายเพลง · ข้อที่ ${r.no || 1}` : '🎯 ทายเพลง';
+  if (!r) { $('qcIcon').textContent = '🎯'; $('qcText').textContent = 'รอแอดมินสุ่มเพลง...'; $('qcSub').textContent = ''; }
+  else if (quiz.buzz.length) { $('qcIcon').textContent = '🔔'; $('qcText').textContent = `${quiz.buzz[0].name} กดก่อน!`; $('qcSub').textContent = 'เพลงหยุดชั่วคราว รอแอดมินตัดสิน'; }
+  else { $('qcIcon').textContent = '🎵'; $('qcText').textContent = 'เพลงลึกลับ...'; $('qcSub').textContent = 'ใครรู้ชื่อเพลง กดปุ่ม BUZZ บนมือถือได้เลย!'; }
+  $('hudBuzz').innerHTML = quiz.buzz.length ? quiz.buzz.slice(0, 6).map((b, i) => `<div class="${i === 0 ? 'text-amber-300 font-bold' : 'text-slate-200'} flex justify-between"><span>${i + 1}. ${esc(b.name)}</span><span>${b.judged === '+' ? '✅' : b.judged === '-' ? '❌' : ''}</span></div>`).join('') : '<span class="text-slate-500">ยังไม่มีคนกด</span>';
+  $('hudScores').innerHTML = quiz.scores.length ? quiz.scores.slice(0, 6).map((p, i) => `<div class="flex justify-between text-slate-100"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${esc(p.name)}</span><span class="font-bold text-amber-300">${p.score}</span></div>`).join('') : '<span class="text-slate-500">ยังไม่มีคะแนน</span>';
+}
+
 let ac = null, nb = null;
 function getAC() {
   if (!ac) { ac = new (window.AudioContext || window.webkitAudioContext)(); nb = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate); const d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
@@ -329,9 +461,10 @@ const SFX = {
   horn() { const t = ac.currentTime; [0, 0.5, 1].forEach(o => [415, 523, 622].forEach(f => tone(t + o, 0.38, f, 'sawtooth', 0.13))); },
   drum() { const t = ac.currentTime; for (let i = 0; i < 26; i++) { burst(t + i * 0.075, 0.09, 0.6, 1800, 0.7); tone(t + i * 0.075, 0.08, 170, 'sine', 0.3); } burst(t + 2, 1.4, 0.7, 6500, 0.5); tone(t + 2, 0.5, 90, 'sine', 0.6); },
   whistle() { const t = ac.currentTime; tone(t, 0.7, 900, 'sine', 0.35, 2300); },
-  buzz() { const t = ac.currentTime; tone(t, 0.7, 110, 'square', 0.3); tone(t, 0.7, 117, 'square', 0.25); }
+  buzz() { const t = ac.currentTime; tone(t, 0.7, 110, 'square', 0.3); tone(t, 0.7, 117, 'square', 0.25); },
+  ding() { const t = ac.currentTime; tone(t, 0.6, 880, 'sine', 0.35); tone(t + 0.12, 0.8, 1320, 'sine', 0.3); }
 };
-const SFX_EMOJI = { clap: '👏', horn: '📯', drum: '🥁', whistle: '🎉', buzz: '❌' };
+const SFX_EMOJI = { clap: '👏', horn: '📯', drum: '🥁', whistle: '🎉', buzz: '❌', ding: '🔔' };
 let firstCmd = true, firstSfx = true;
 if (isMain) {
   onValue(sfxRef, snap => {
@@ -348,6 +481,10 @@ if (isMain) {
       const dur = player.getDuration() || 0;
       if (c.type === 'seekBy') player.seekTo(Math.min(Math.max(0, player.getCurrentTime() + c.value), dur ? dur - 1 : 1e9), true);
       if (c.type === 'seekTo') player.seekTo(c.value, true);
+      if (c.type === 'pause') player.pauseVideo();
+      if (c.type === 'play') player.playVideo();
+      if (c.type === 'qreplay' && quiz.round) { player.seekTo(quiz.round.start, true); player.playVideo(); }
+      if (c.type === 'qrand' && dur) { player.seekTo(Math.round(dur * (0.2 + Math.random() * 0.35)), true); player.playVideo(); }
       reportPos();
     } catch {}
   });
@@ -464,7 +601,7 @@ async function addByLink(vid) {
 }
 
 const fmt = x => { x = Math.max(0, Math.floor(x || 0)); return Math.floor(x / 60) + ':' + String(x % 60).padStart(2, '0'); };
-const sendCmd = (type, value) => guard(set(cmdRef, { type, value, ts: Date.now(), n: Math.random() }));
+const sendCmd = (type, value) => guard(set(cmdRef, { type, value: value ?? null, ts: Date.now(), n: Math.random() }));
 function updateSeek() {
   const el = $('seek'); if (!el || seeking) return;
   el.value = pos.d ? pos.t / pos.d * 100 : 0; $('tCur').textContent = fmt(pos.t); $('tDur').textContent = fmt(pos.d);
@@ -484,6 +621,73 @@ if (!isMain) {
   onValue(posRef, snap => { pos = snap.val() || { t: 0, d: 0 }; updateSeek(); });
   onValue(histRef, snap => { hist = Object.values(snap.val() || {}).sort((a, b) => b.ts - a.ts).slice(0, 50); renderHist(); });
 }
+
+const playerName = () => ($('nameInput').value.trim() || 'ผู้เล่น-' + cid.slice(0, 3));
+function renderModeUI() {
+  if (isMain) return;
+  const q = mode === 'quiz';
+  document.querySelectorAll('.k-only').forEach(e => e.classList.toggle('hidden', q));
+  $('quizUI').classList.toggle('hidden', !q);
+  document.querySelectorAll('.mode-btn').forEach(b => b.className = 'mode-btn py-2 rounded-lg text-xs ' + (b.dataset.mode === mode ? 'bg-pink-600 text-white' : 'bg-slate-800 text-slate-300'));
+  renderQuizPhone();
+}
+window.setMode = m => {
+  if (m === mode) return;
+  const u = { mode: m }; if (m === 'quiz') u['quiz/adminId'] = cid;       // คนที่เปิดโหมดทายเพลงจะเป็นแอดมิน
+  guard(update(ref(db, `rooms/${roomId}`), u));
+};
+window.claimAdmin = () => guard(set(ref(db, `rooms/${roomId}/quiz/adminId`), cid));
+window.sendCmd = sendCmd;
+function renderQuizPhone() {
+  if (isMain || mode !== 'quiz') return;
+  const r = quiz.round, isAdmin = quiz.adminId === cid, rev = !!r && r.status === 'revealed';
+  const mine = quiz.buzz.findIndex(b => b.id === cid);
+  $('qAdmin').classList.toggle('hidden', !isAdmin);
+  $('qPlayer').classList.toggle('hidden', isAdmin);
+  $('qClaim').classList.toggle('hidden', isAdmin);
+  $('qStatus').textContent = !r ? '⏳ รอแอดมินสุ่มเพลง...' : rev ? `✅ เฉลย: ${r.title}` : quiz.buzz.length ? `🔔 ${quiz.buzz[0].name} กดก่อน!` : `🎵 ข้อที่ ${r.no || 1} กำลังเล่น ใครรู้กด BUZZ!`;
+  const bb = $('buzzBtn'); bb.disabled = !r || rev || mine >= 0;
+  bb.textContent = mine >= 0 ? `คุณกดเป็นลำดับที่ ${mine + 1}` : '🔔 BUZZ!';
+  $('qSecret').textContent = r ? `คำตอบ: ${r.title} — ${r.channel || ''} (เริ่มที่ ${fmt(r.start)} จาก ${fmt(r.dur)})` : 'กด "สุ่มเพลงถัดไป" เพื่อเริ่มรอบแรก';
+  $('qBuzz').innerHTML = quiz.buzz.length ? quiz.buzz.map((b, i) => `<div class="flex items-center gap-2 p-2 rounded-xl bg-slate-900 border ${i === 0 ? 'border-amber-400/60' : 'border-slate-800'}">
+    <span class="w-5 text-xs text-slate-500">${i + 1}</span><span class="flex-1 text-sm truncate">${esc(b.name)}</span>
+    ${b.judged ? (b.judged === '+' ? '<span class="text-xs">✅ +1</span>' : '<span class="text-xs">❌ −1</span>')
+      : (isAdmin ? `<button onclick="quizJudge('${esc(b.id)}',1)" class="px-2.5 py-1 bg-emerald-600 rounded-lg text-xs">✓ +1</button><button onclick="quizJudge('${esc(b.id)}',-1)" class="px-2.5 py-1 bg-rose-600 rounded-lg text-xs">✕ −1</button>` : '')}</div>`).join('')
+    : '<p class="text-xs text-slate-600">ยังไม่มีคนกด</p>';
+  $('qScores').innerHTML = quiz.scores.length ? quiz.scores.map((p, i) => `<div class="flex justify-between p-2 rounded-xl bg-slate-900 border border-slate-800 text-sm"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${esc(p.name)}</span><span class="font-bold text-amber-300">${p.score}</span></div>`).join('')
+    : '<p class="text-xs text-slate-600">ยังไม่มีคะแนน</p>';
+}
+window.buzz = () => {
+  const r = quiz.round;
+  if (!r || r.status === 'revealed' || quiz.buzz.some(b => b.id === cid)) return;
+  try { navigator.vibrate && navigator.vibrate(60); } catch {}
+  guard(set(ref(db, `rooms/${roomId}/quiz/buzz/${cid}`), { name: playerName(), ts: serverTimestamp() }));   // เรียงตามเวลาเซิร์ฟเวอร์ ยุติธรรมไม่ขึ้นกับนาฬิกาเครื่อง
+};
+const isoSec = d => { const m = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(d || ''); return m ? (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0) : 0; };
+let qPool = [], qUsed = new Set();
+window.quizNext = async () => {
+  try {
+    if (!qPool.length) {
+      toast('กำลังสุ่มเพลงจากชาร์ต...');
+      const j = await yt('videos', { part: 'snippet,contentDetails,status', chart: 'mostPopular', videoCategoryId: '10', regionCode: CHART_REGION, maxResults: 50 });
+      qPool = j.items.filter(i => i.status && i.status.embeddable).map(i => ({ vid: i.id, title: dec(i.snippet.title), channel: dec(i.snippet.channelTitle), dur: isoSec(i.contentDetails.duration) })).filter(x => x.dur >= 100 && x.dur <= 480);
+    }
+  } catch (e) { return toast(ytErr(e)); }
+  if (!qPool.length) return toast('ไม่พบเพลงในชาร์ต');
+  let left = qPool.filter(x => !qUsed.has(x.vid)); if (!left.length) { qUsed.clear(); left = qPool; }
+  const p = left[Math.floor(Math.random() * left.length)]; qUsed.add(p.vid);
+  const start = Math.round(p.dur * (0.28 + Math.random() * 0.06));       // ประมาณช่วงก่อนท่อนฮุก (YouTube ไม่บอกตำแหน่งฮุกจริง)
+  guard(update(ref(db, `rooms/${roomId}/quiz`), { round: { ...p, start, status: 'playing', n: Date.now(), no: ((quiz.round && quiz.round.no) || 0) + 1 }, buzz: null }));
+};
+window.quizReveal = () => { if (quiz.round) guard(update(ref(db, `rooms/${roomId}/quiz/round`), { status: 'revealed' })); };
+window.quizResetBuzz = () => guard(set(ref(db, `rooms/${roomId}/quiz/buzz`), null));
+window.quizResetScores = () => { if (confirm('ล้างคะแนนทั้งหมด?')) guard(set(ref(db, `rooms/${roomId}/quiz/scores`), null)); };
+window.quizJudge = (pid, d) => {
+  const b = quiz.buzz.find(x => x.id === pid); if (!b || b.judged) return;
+  guard(update(ref(db, `rooms/${roomId}/quiz/buzz/${pid}`), { judged: d > 0 ? '+' : '-' }));
+  guard(runTransaction(ref(db, `rooms/${roomId}/quiz/scores/${pid}`), cur => ({ name: b.name, score: ((cur && cur.score) || 0) + d })));
+  if (d > 0) { quizReveal(); sfx('clap'); } else sfx('buzz');      // ตอบถูก = เฉลยและปรบมือให้อัตโนมัติ
+};
 
 function renderQueue() {
   $('tabQueue').textContent = `🎶 คิว (${queue.length})`;
