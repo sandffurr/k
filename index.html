@@ -27,8 +27,10 @@
     <p class="text-slate-200 text-lg">สแกนด้วยมือถือเพื่อเลือกเพลงและควบคุมจอ</p>
     <p id="roomCode" class="text-slate-400 text-sm"></p>
     <p id="idleHint" class="text-pink-300 text-sm"></p>
+    <a href="https://www.youtube.com/" target="_blank" rel="noopener" class="text-xs text-slate-400 underline">มี YouTube Premium? ล็อกอินในเบราว์เซอร์นี้ก่อนเพื่อดูแบบไม่มีโฆษณา ↗</a>
     <button id="startBtn" onclick="userStart()" class="px-8 py-3 bg-gradient-to-r from-pink-500 to-purple-600 rounded-2xl text-lg font-semibold shadow-xl">▶ แตะเพื่อเริ่ม (เต็มจอ)</button>
   </div>
+  <button id="fsBtn" onclick="goFullscreen()" class="hidden absolute top-4 right-4 z-40 px-4 py-2 bg-black/60 hover:bg-black/80 text-white rounded-xl text-sm backdrop-blur">⛶ เต็มจอ</button>
   <button id="tapPlay" onclick="userStart()" class="hidden absolute inset-0 m-auto w-fit h-fit px-8 py-4 bg-pink-600 rounded-2xl text-xl font-semibold shadow-2xl z-40">▶ แตะเพื่อเริ่มเล่น</button>
 </div>
 
@@ -52,28 +54,58 @@
         <button id="pauseBtn" onclick="togglePause()" class="w-11 h-11 bg-slate-800 rounded-xl text-lg">⏸</button>
         <button onclick="skipSong()" class="w-11 h-11 bg-slate-800 rounded-xl text-lg">⏭</button>
       </div>
-      <div class="flex justify-between">
-        <button onclick="sendReaction('🔥')" class="flex-1 text-2xl py-1 active:scale-125 transition">🔥</button>
-        <button onclick="sendReaction('👏')" class="flex-1 text-2xl py-1 active:scale-125 transition">👏</button>
-        <button onclick="sendReaction('🎤')" class="flex-1 text-2xl py-1 active:scale-125 transition">🎤</button>
-        <button onclick="sendReaction('🍻')" class="flex-1 text-2xl py-1 active:scale-125 transition">🍻</button>
-      </div>
     </div>
     <div class="flex gap-2">
       <input id="q" placeholder="ค้นหาเพลง หรือวางลิงก์ YouTube" class="flex-1 min-w-0 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-pink-500">
       <button onclick="doSearch()" class="px-4 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl text-sm font-medium">ค้นหา</button>
     </div>
     <label class="flex items-center gap-2 text-xs text-slate-400"><input type="checkbox" id="kar" checked class="accent-pink-500"> เติมคำว่า "คาราโอเกะ" ให้อัตโนมัติ</label>
-    <div class="grid grid-cols-3 gap-1 text-xs">
-      <button data-tab="search" onclick="tab('search')" class="py-2 rounded-lg">🔍 ผลค้นหา</button>
-      <button data-tab="chart" onclick="tab('chart')" class="py-2 rounded-lg">📈 ชาร์ตยอดนิยม</button>
-      <button data-tab="queue" onclick="tab('queue')" id="tabQueue" class="py-2 rounded-lg">🎶 คิว</button>
+    <div class="grid grid-cols-5 gap-1 text-[11px]">
+      <button data-tab="search" onclick="tab('search')">🔍 ค้นหา</button>
+      <button data-tab="chart" onclick="tab('chart')">📈 ชาร์ต</button>
+      <button data-tab="queue" onclick="tab('queue')" id="tabQueue">🎶 คิว</button>
+      <button data-tab="hist" onclick="tab('hist')">🕘 เคยเล่น</button>
+      <button data-tab="control" onclick="tab('control')">🎛 ควบคุม</button>
     </div>
   </div>
   <div class="p-3 pb-20">
     <div id="pane-search" class="space-y-2"><p class="text-center text-xs text-slate-500 py-8">พิมพ์ชื่อเพลงแล้วกดค้นหา</p></div>
     <div id="pane-chart" class="hidden space-y-2"></div>
     <div id="pane-queue" class="hidden space-y-2"></div>
+    <div id="pane-hist" class="hidden space-y-2"></div>
+    <div id="pane-control" class="hidden space-y-3">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 space-y-2">
+        <p class="text-xs text-slate-400">เลื่อนเวลาเพลง</p>
+        <div class="flex items-center gap-2 text-[11px] text-slate-400">
+          <span id="tCur" class="w-9 text-right">0:00</span>
+          <input id="seek" type="range" min="0" max="100" step="0.1" value="0" class="flex-1 accent-pink-500" oninput="seekDrag(this.value)" onchange="seekTo(this.value)">
+          <span id="tDur" class="w-9">0:00</span>
+        </div>
+        <div class="grid grid-cols-4 gap-1.5 text-xs">
+          <button onclick="seekBy(-30)" class="py-2 bg-slate-800 rounded-lg">⏪ 30</button>
+          <button onclick="seekBy(-10)" class="py-2 bg-slate-800 rounded-lg">⏪ 10</button>
+          <button onclick="seekBy(10)" class="py-2 bg-slate-800 rounded-lg">10 ⏩</button>
+          <button onclick="seekBy(30)" class="py-2 bg-slate-800 rounded-lg">30 ⏩</button>
+        </div>
+        <button onclick="restartSong()" class="w-full py-2 bg-slate-800 rounded-lg text-xs">⏮ เริ่มเพลงนี้ใหม่</button>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 space-y-2">
+        <p class="text-xs text-slate-400">เสียงเอฟเฟกต์ (ดังที่จอหลัก)</p>
+        <div class="grid grid-cols-5 gap-1.5 text-center text-[10px]">
+          <button onclick="sfx('clap')" class="py-2 bg-slate-800 rounded-lg active:scale-95"><span class="text-xl block">👏</span>ปรบมือ</button>
+          <button onclick="sfx('horn')" class="py-2 bg-slate-800 rounded-lg active:scale-95"><span class="text-xl block">📯</span>แตร</button>
+          <button onclick="sfx('drum')" class="py-2 bg-slate-800 rounded-lg active:scale-95"><span class="text-xl block">🥁</span>กลองรัว</button>
+          <button onclick="sfx('whistle')" class="py-2 bg-slate-800 rounded-lg active:scale-95"><span class="text-xl block">🎉</span>ฮิ้ว</button>
+          <button onclick="sfx('buzz')" class="py-2 bg-slate-800 rounded-lg active:scale-95"><span class="text-xl block">❌</span>ตื๊ด</button>
+        </div>
+        <div class="flex justify-between pt-1">
+          <button onclick="sendReaction('🔥')" class="flex-1 text-2xl py-1 active:scale-125 transition">🔥</button>
+          <button onclick="sendReaction('👏')" class="flex-1 text-2xl py-1 active:scale-125 transition">👏</button>
+          <button onclick="sendReaction('🎤')" class="flex-1 text-2xl py-1 active:scale-125 transition">🎤</button>
+          <button onclick="sendReaction('🍻')" class="flex-1 text-2xl py-1 active:scale-125 transition">🍻</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -135,8 +167,12 @@ const phoneLink = `${baseUrl}?room=${roomId}&remote=1`;
 const queueRef = ref(db, `rooms/${roomId}/queue`);
 const stateRef = ref(db, `rooms/${roomId}/state`);
 const reactionRef = ref(db, `rooms/${roomId}/reactions`);
+const cmdRef = ref(db, `rooms/${roomId}/cmd`);
+const sfxRef = ref(db, `rooms/${roomId}/sfx`);
+const posRef = ref(db, `rooms/${roomId}/pos`);
+const histRef = ref(db, `rooms/${roomId}/history`);
 
-let queue = [], currentSong = null, paused = false, queueLoaded = false, stateLoaded = false;
+let queue = [], currentSong = null, paused = false, queueLoaded = false, stateLoaded = false, pos = { t: 0, d: 0 }, seeking = false;
 
 $(isMain ? 'mainView' : 'phoneView').classList.remove('hidden');
 $('roomLabel').textContent = '#' + roomId;
@@ -159,7 +195,7 @@ onValue(stateRef, snap => {
   const changed = sig(next) !== sig(currentSong);
   currentSong = next; paused = !!(s && s.paused); stateLoaded = true;
   if (isMain) { if (changed) showSong(next); else applyPause(); updateIdle(); maybeAdvance(); }
-  else updateNow();
+  else { if (changed) pos = { t: 0, d: 0 }; updateNow(); updateSeek(); }
 }, dbErr);
 
 let firstReaction = true;
@@ -208,12 +244,20 @@ function updateIdle() {
   $('startBtn').classList.toggle('hidden', started);
   $('idleHint').textContent = currentSong ? `กำลังเล่น: ${currentSong.title}` : (queue.length ? 'กำลังโหลดเพลง...' : 'ยังไม่มีเพลงในคิว เพิ่มเพลงจากมือถือได้เลย');
 }
+window.goFullscreen = async () => { try { await document.documentElement.requestFullscreen(); } catch { toast('เบราว์เซอร์ไม่อนุญาตให้เต็มจอ ลองกด F11'); } };
+function updateFs() { $('fsBtn').classList.toggle('hidden', !isMain || !started || !!document.fullscreenElement); }
+if (isMain) {
+  document.addEventListener('fullscreenchange', updateFs);
+  $('mainView').addEventListener('dblclick', () => { if (!started) return; document.fullscreenElement ? document.exitFullscreen() : goFullscreen(); });
+  document.addEventListener('keydown', e => { if (started && (e.key === 'f' || e.key === 'F')) document.fullscreenElement ? document.exitFullscreen() : goFullscreen(); });
+}
 window.userStart = async () => {
   started = true; $('tapPlay').classList.add('hidden');
+  try { getAC(); } catch {}
   try { await document.documentElement.requestFullscreen(); } catch {}
   try { await navigator.wakeLock.request('screen'); } catch {}
   try { player && player.playVideo(); } catch {}
-  updateIdle();
+  updateIdle(); updateFs();
 };
 function loadYT() {
   return ytPromise ||= new Promise(res => {
@@ -242,6 +286,7 @@ async function showSong(song) {
   if (!id) { toast('ลิงก์เพลงไม่ถูกต้อง ข้ามไปเพลงถัดไป'); setTimeout(() => my === playToken && skipSong(), 1500); return; }
   box.innerHTML = '<div id="ytTarget" class="w-full h-full"></div>';
   flashTitle(song);
+  guard(set(ref(db, `rooms/${roomId}/history/${id}`), { title: song.title, vid: id, ts: Date.now() }));
   await loadYT();
   if (my !== playToken) return;
   player = new YT.Player('ytTarget', {
@@ -259,6 +304,60 @@ async function showSong(song) {
       onError: () => { if (my !== playToken) return; toast('เพลงนี้เล่นไม่ได้ ข้ามไปเพลงถัดไป'); setTimeout(() => my === playToken && skipSong(), 2000); }
     }
   });
+}
+let ac = null, nb = null;
+function getAC() {
+  if (!ac) { ac = new (window.AudioContext || window.webkitAudioContext)(); nb = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate); const d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  if (ac.state === 'suspended') ac.resume();
+  return ac;
+}
+function burst(t0, dur, vol, freq, q) {
+  const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+  s.buffer = nb; f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q;
+  g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+  s.connect(f); f.connect(g); g.connect(ac.destination); s.start(t0, Math.random() * 1.5, dur + 0.05);
+}
+function tone(t0, dur, f, type, vol, f2) {
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t0); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + dur);
+  g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g); g.connect(ac.destination); o.start(t0); o.stop(t0 + dur + 0.05);
+}
+const SFX = {
+  clap() { const t = ac.currentTime; for (let i = 0; i < 140; i++) { const x = Math.random() * 3.2; burst(t + x, 0.07 + Math.random() * 0.05, 0.1 + 0.45 * Math.sin(Math.PI * x / 3.2), 1200 + Math.random() * 3000, 0.7); } },
+  horn() { const t = ac.currentTime; [0, 0.5, 1].forEach(o => [415, 523, 622].forEach(f => tone(t + o, 0.38, f, 'sawtooth', 0.13))); },
+  drum() { const t = ac.currentTime; for (let i = 0; i < 26; i++) { burst(t + i * 0.075, 0.09, 0.6, 1800, 0.7); tone(t + i * 0.075, 0.08, 170, 'sine', 0.3); } burst(t + 2, 1.4, 0.7, 6500, 0.5); tone(t + 2, 0.5, 90, 'sine', 0.6); },
+  whistle() { const t = ac.currentTime; tone(t, 0.7, 900, 'sine', 0.35, 2300); },
+  buzz() { const t = ac.currentTime; tone(t, 0.7, 110, 'square', 0.3); tone(t, 0.7, 117, 'square', 0.25); }
+};
+const SFX_EMOJI = { clap: '👏', horn: '📯', drum: '🥁', whistle: '🎉', buzz: '❌' };
+let firstCmd = true, firstSfx = true;
+if (isMain) {
+  onValue(sfxRef, snap => {
+    const v = snap.val();
+    if (firstSfx) { firstSfx = false; return; }
+    if (!v || !started || !SFX[v.name]) return;
+    try { getAC(); SFX[v.name](); floatEmoji(SFX_EMOJI[v.name]); } catch {}
+  });
+  onValue(cmdRef, snap => {
+    const c = snap.val();
+    if (firstCmd) { firstCmd = false; return; }
+    if (!c || !player) return;
+    try {
+      const dur = player.getDuration() || 0;
+      if (c.type === 'seekBy') player.seekTo(Math.min(Math.max(0, player.getCurrentTime() + c.value), dur ? dur - 1 : 1e9), true);
+      if (c.type === 'seekTo') player.seekTo(c.value, true);
+      reportPos();
+    } catch {}
+  });
+  setInterval(reportPos, 1500);
+}
+function reportPos() {
+  try {
+    if (!player || !player.getDuration) return;
+    const st = player.getPlayerState();
+    if (st === 1 || st === 2 || st === 3) guard(set(posRef, { t: player.getCurrentTime(), d: player.getDuration() }));
+  } catch {}
 }
 function floatEmoji(emoji) {
   const c = $('floatingReactions'), el = document.createElement('div');
@@ -280,7 +379,7 @@ function updateNow() {
   $('pauseBtn').textContent = paused ? '▶' : '⏸';
 }
 window.tab = n => {
-  ['search', 'chart', 'queue'].forEach(t => {
+  ['search', 'chart', 'queue', 'hist', 'control'].forEach(t => {
     $('pane-' + t).classList.toggle('hidden', t !== n);
     document.querySelector(`[data-tab="${t}"]`).className = 'py-2 rounded-lg ' + (t === n ? 'bg-pink-600 text-white' : 'bg-slate-900 text-slate-300');
   });
@@ -308,8 +407,8 @@ const msg = (el, t) => el.innerHTML = `<p class="text-center text-xs text-slate-
 const thumb = id => `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
 
 function addBtn(vid) {
-  return addedSet.has(vid) ? '<span class="text-[11px] text-emerald-400 px-2 py-1 text-center">✓ เพิ่มแล้ว</span>'
-    : `<button onclick="addVid('${vid}')" class="px-3 py-1.5 bg-pink-600 rounded-lg text-xs font-medium">+ เพิ่ม</button>`;
+  const inQ = queue.some(s => videoId(s.url) === vid);
+  return `<button onclick="addVid('${vid}')" class="px-3 py-1.5 ${inQ ? 'bg-slate-700' : 'bg-pink-600'} rounded-lg text-xs font-medium">${inQ ? '+ เพิ่มอีกครั้ง' : '+ เพิ่ม'}</button>`;
 }
 function rowHtml(it, extra = '') {
   known.set(it.vid, it);
@@ -361,6 +460,28 @@ async function addByLink(vid) {
   let title = 'เพลงจาก YouTube';
   try { const j = await yt('videos', { part: 'snippet', id: vid }); if (j.items[0]) title = dec(j.items[0].snippet.title); } catch {}
   pushSong(vid, title); $('q').value = '';
+}
+
+const fmt = x => { x = Math.max(0, Math.floor(x || 0)); return Math.floor(x / 60) + ':' + String(x % 60).padStart(2, '0'); };
+const sendCmd = (type, value) => guard(set(cmdRef, { type, value, ts: Date.now(), n: Math.random() }));
+function updateSeek() {
+  const el = $('seek'); if (!el || seeking) return;
+  el.value = pos.d ? pos.t / pos.d * 100 : 0; $('tCur').textContent = fmt(pos.t); $('tDur').textContent = fmt(pos.d);
+}
+window.seekBy = d => { if (!currentSong) return; sendCmd('seekBy', d); pos.t = Math.max(0, pos.t + d); updateSeek(); };
+window.seekDrag = v => { seeking = true; $('tCur').textContent = fmt(v / 100 * pos.d); };
+window.seekTo = v => { seeking = false; if (!currentSong || !pos.d) return; pos.t = Math.round(v / 100 * pos.d); sendCmd('seekTo', pos.t); };
+window.restartSong = () => { if (currentSong) { sendCmd('seekTo', 0); pos.t = 0; updateSeek(); } };
+window.sfx = name => guard(set(sfxRef, { name, ts: Date.now() }));
+let hist = [];
+function renderHist() {
+  const el = $('pane-hist');
+  if (!hist.length) return msg(el, 'ยังไม่มีเพลงที่เคยเล่นในห้องนี้');
+  el.innerHTML = hist.map(h => rowHtml({ vid: h.vid, title: h.title, channel: 'เคยเล่นแล้ว' })).join('');
+}
+if (!isMain) {
+  onValue(posRef, snap => { pos = snap.val() || { t: 0, d: 0 }; updateSeek(); });
+  onValue(histRef, snap => { hist = Object.values(snap.val() || {}).sort((a, b) => b.ts - a.ts).slice(0, 50); renderHist(); });
 }
 
 function renderQueue() {
