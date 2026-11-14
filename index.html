@@ -312,7 +312,6 @@ if (isMain) {
 }
 window.userStart = async () => {
   started = true; $('tapPlay').classList.add('hidden');
-  try { getAC(); } catch {}
   try { await document.documentElement.requestFullscreen(); } catch {}
   try { await navigator.wakeLock.request('screen'); } catch {}
   try { player && player.playVideo(); } catch {}
@@ -419,7 +418,7 @@ function quizMainSync(prev) {
   if (!prev.round || prev.round.n !== r.n) { playQuizRound(r); return; }
   if (prev.round.status !== 'revealed' && r.status === 'revealed') { try { player.playVideo(); } catch {} return; }
   if (r.status === 'playing') {
-    if (!prev.buzz.length && quiz.buzz.length) { try { player.pauseVideo(); } catch {} if (started) { try { getAC(); SFX.ding(); } catch {} } }
+    if (!prev.buzz.length && quiz.buzz.length) { try { player.pauseVideo(); } catch {} if (started) { try { SFX.ding(); } catch {} } }
     else if (prev.buzz.length && !quiz.buzz.length) { try { player.playVideo(); } catch {} }
   }
 }
@@ -438,40 +437,28 @@ function renderQuizMain() {
   $('hudScores').innerHTML = quiz.scores.length ? quiz.scores.slice(0, 6).map((p, i) => `<div class="flex justify-between text-slate-100"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${esc(p.name)}</span><span class="font-bold text-amber-300">${p.score}</span></div>`).join('') : '<span class="text-slate-500">ยังไม่มีคะแนน</span>';
 }
 
-let ac = null, nb = null;
-function getAC() {
-  if (!ac) { ac = new (window.AudioContext || window.webkitAudioContext)(); nb = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate); const d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
-  if (ac.state === 'suspended') ac.resume();
-  return ac;
-}
-function burst(t0, dur, vol, freq, q) {
-  const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
-  s.buffer = nb; f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q;
-  g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
-  s.connect(f); f.connect(g); g.connect(ac.destination); s.start(t0, Math.random() * 1.5, dur + 0.05);
-}
-function tone(t0, dur, f, type, vol, f2) {
-  const o = ac.createOscillator(), g = ac.createGain();
-  o.type = type; o.frequency.setValueAtTime(f, t0); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + dur);
-  g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  o.connect(g); g.connect(ac.destination); o.start(t0); o.stop(t0 + dur + 0.05);
-}
+/* ======= เสียงเอฟเฟกต์จาก GitHub (sandffurr/karaokeparty) ======= */
+const GITHUB_AUDIO_BASE = 'https://raw.githubusercontent.com/sandffurr/karaokeparty/main/';
+
 const SFX = {
-  clap() { const t = ac.currentTime; for (let i = 0; i < 140; i++) { const x = Math.random() * 3.2; burst(t + x, 0.07 + Math.random() * 0.05, 0.1 + 0.45 * Math.sin(Math.PI * x / 3.2), 1200 + Math.random() * 3000, 0.7); } },
-  horn() { const t = ac.currentTime; [0, 0.5, 1].forEach(o => [415, 523, 622].forEach(f => tone(t + o, 0.38, f, 'sawtooth', 0.13))); },
-  drum() { const t = ac.currentTime; for (let i = 0; i < 26; i++) { burst(t + i * 0.075, 0.09, 0.6, 1800, 0.7); tone(t + i * 0.075, 0.08, 170, 'sine', 0.3); } burst(t + 2, 1.4, 0.7, 6500, 0.5); tone(t + 2, 0.5, 90, 'sine', 0.6); },
-  whistle() { const t = ac.currentTime; tone(t, 0.7, 900, 'sine', 0.35, 2300); },
-  buzz() { const t = ac.currentTime; tone(t, 0.7, 110, 'square', 0.3); tone(t, 0.7, 117, 'square', 0.25); },
-  ding() { const t = ac.currentTime; tone(t, 0.6, 880, 'sine', 0.35); tone(t + 0.12, 0.8, 1320, 'sine', 0.3); }
+  clap: () => new Audio(GITHUB_AUDIO_BASE + 'Crowd Cheering.mp3').play().catch(() => {}),
+  horn: () => new Audio(GITHUB_AUDIO_BASE + 'Horn.mp3').play().catch(() => {}),
+  drum: () => new Audio(GITHUB_AUDIO_BASE + 'Drum.mp3').play().catch(() => {}),
+  whistle: () => new Audio(GITHUB_AUDIO_BASE + 'Wolf Whistle.mp3').play().catch(() => {}),
+  buzz: () => new Audio(GITHUB_AUDIO_BASE + 'Buzzer.mp3').play().catch(() => {}),
+  correct: () => new Audio(GITHUB_AUDIO_BASE + 'Correct.mp3').play().catch(() => {}),
+  fail: () => new Audio(GITHUB_AUDIO_BASE + 'Fail.mp3').play().catch(() => {}),
+  ding: () => new Audio(GITHUB_AUDIO_BASE + 'Correct.mp3').play().catch(() => {})
 };
-const SFX_EMOJI = { clap: '👏', horn: '📯', drum: '🥁', whistle: '🎉', buzz: '❌', ding: '🔔' };
+const SFX_EMOJI = { clap: '👏', horn: '📯', drum: '🥁', whistle: '🎉', buzz: '❌', correct: '✅', fail: '❌', ding: '🔔' };
+
 let firstCmd = true, firstSfx = true;
 if (isMain) {
   onValue(sfxRef, snap => {
     const v = snap.val();
     if (firstSfx) { firstSfx = false; return; }
     if (!v || !started || !SFX[v.name]) return;
-    try { getAC(); SFX[v.name](); floatEmoji(SFX_EMOJI[v.name]); } catch {}
+    try { SFX[v.name](); floatEmoji(SFX_EMOJI[v.name]); } catch {}
   });
   onValue(cmdRef, snap => {
     const c = snap.val();
@@ -686,7 +673,7 @@ window.quizJudge = (pid, d) => {
   const b = quiz.buzz.find(x => x.id === pid); if (!b || b.judged) return;
   guard(update(ref(db, `rooms/${roomId}/quiz/buzz/${pid}`), { judged: d > 0 ? '+' : '-' }));
   guard(runTransaction(ref(db, `rooms/${roomId}/quiz/scores/${pid}`), cur => ({ name: b.name, score: ((cur && cur.score) || 0) + d })));
-  if (d > 0) { quizReveal(); sfx('clap'); } else sfx('buzz');      // ตอบถูก = เฉลยและปรบมือให้อัตโนมัติ
+  if (d > 0) { quizReveal(); sfx('correct'); } else sfx('fail');      // ตอบถูกเล่น Correct.mp3, ตอบผิดเล่น Fail.mp3
 };
 
 function renderQueue() {
