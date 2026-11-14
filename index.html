@@ -3,120 +3,89 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Party Karaoke - ปาร์ตี้คาราโอเกะสุดมันส์</title>
+<title>Party Karaoke</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/lucide@0.460.0/dist/umd/lucide.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<style>body{font-family:'Prompt',sans-serif}</style>
+<style>body{font-family:'Prompt',sans-serif}iframe{border:0}</style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+<body class="bg-slate-950 text-slate-100">
 
-<header class="bg-slate-900 border-b border-slate-800 px-4 md:px-6 py-3 flex justify-between items-center sticky top-0 z-40 gap-2">
-  <div class="flex items-center space-x-3 min-w-0">
-    <div class="bg-gradient-to-r from-pink-500 to-purple-600 p-2 rounded-xl text-white shadow-lg shadow-pink-500/20 shrink-0"><i data-lucide="mic-2" class="w-6 h-6"></i></div>
-    <div class="min-w-0">
-      <h1 class="font-bold text-lg text-white flex items-center gap-2">Party Karaoke
-        <span id="modeBadge" class="text-xs bg-pink-500/20 text-pink-400 px-2 py-0.5 rounded-full border border-pink-500/30"></span></h1>
-      <p class="text-xs text-slate-400 truncate" id="roomDisplay">ห้อง: กำลังสร้าง...</p>
-    </div>
+<!-- ===== จอหลัก (ทีวี/คอม): วิดีโอเต็มจอ ไม่มีปุ่มควบคุม ===== -->
+<div id="mainView" class="hidden fixed inset-0 bg-black overflow-hidden select-none">
+  <div id="playerContainer" class="absolute inset-0"></div>
+  <div class="absolute inset-0 z-[5]"></div>
+  <div id="floatingReactions" class="absolute inset-0 pointer-events-none overflow-hidden z-20"></div>
+  <div id="titleBar" class="absolute inset-x-0 bottom-0 z-10 p-6 md:p-10 bg-gradient-to-t from-black/85 to-transparent transition-opacity duration-1000 opacity-0 pointer-events-none">
+    <p class="text-pink-400 text-sm md:text-base font-semibold">🎤 กำลังเล่น</p>
+    <h2 id="titleBarText" class="text-white font-bold text-2xl md:text-4xl"></h2>
+    <p id="titleBarSub" class="text-slate-300 text-sm md:text-lg mt-1"></p>
   </div>
-  <div class="flex items-center gap-2 shrink-0">
-    <span id="connStatus" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700 flex items-center gap-1.5">
-      <span id="connDot" class="w-2 h-2 rounded-full bg-slate-500"></span><span id="connText">กำลังเชื่อมต่อ</span>
-    </span>
-    <a id="modeLink" class="hidden md:inline-block bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700 transition"></a>
-    <button onclick="showRoomQR()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition">
-      <i data-lucide="qr-code" class="w-4 h-4"></i> <span class="hidden sm:inline">ชวนเพื่อนเข้าห้อง</span>
-    </button>
+  <div id="idleScreen" class="absolute inset-0 z-30 bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 flex flex-col items-center justify-center text-center gap-4 p-6">
+    <h1 class="text-4xl md:text-5xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">🎤 Party Karaoke</h1>
+    <div id="qrBig" class="bg-white p-3 rounded-2xl w-56 h-56 md:w-72 md:h-72"></div>
+    <p class="text-slate-200 text-lg">สแกนด้วยมือถือเพื่อเลือกเพลงและควบคุมจอ</p>
+    <p id="roomCode" class="text-slate-400 text-sm"></p>
+    <p id="idleHint" class="text-pink-300 text-sm"></p>
+    <button id="startBtn" onclick="userStart()" class="px-8 py-3 bg-gradient-to-r from-pink-500 to-purple-600 rounded-2xl text-lg font-semibold shadow-xl">▶ แตะเพื่อเริ่ม (เต็มจอ)</button>
   </div>
-</header>
+  <button id="tapPlay" onclick="userStart()" class="hidden absolute inset-0 m-auto w-fit h-fit px-8 py-4 bg-pink-600 rounded-2xl text-xl font-semibold shadow-2xl z-40">▶ แตะเพื่อเริ่มเล่น</button>
+</div>
 
-<main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-  <div class="lg:col-span-2 space-y-4">
-    <!-- จอหลัก: เล่นวิดีโอ -->
-    <div id="playerBox" class="relative bg-black rounded-2xl overflow-hidden shadow-2xl border border-slate-800 aspect-video">
-      <div id="playerContainer" class="w-full h-full flex items-center justify-center bg-slate-900"></div>
-      <div id="floatingReactions" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
-      <button id="tapPlay" onclick="tapToPlay()" class="hidden absolute inset-0 m-auto w-fit h-fit px-6 py-3 bg-pink-600 hover:bg-pink-700 text-white rounded-2xl font-semibold shadow-xl z-20">▶ แตะเพื่อเริ่มเล่น</button>
-      <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-4 pt-10 flex justify-between items-end pointer-events-none">
-        <div class="min-w-0">
-          <span class="text-xs text-pink-400 font-semibold tracking-wider uppercase">กำลังเล่นอยู่</span>
-          <h2 class="np-title text-white font-bold text-lg truncate">ยังไม่ได้เล่นเพลง</h2>
-        </div>
-        <button onclick="skipSong()" class="pointer-events-auto px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-xl backdrop-blur-md transition text-white text-xs font-medium flex items-center gap-1 shrink-0">
-          <i data-lucide="skip-forward" class="w-4 h-4"></i> ข้ามเพลง</button>
+<!-- ===== มือถือ: ค้นหา เพิ่มคิว ควบคุม ===== -->
+<div id="phoneView" class="hidden min-h-screen max-w-md mx-auto">
+  <div class="sticky top-0 z-30 bg-slate-950/95 backdrop-blur border-b border-slate-800 p-3 space-y-2.5">
+    <div class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2 min-w-0">
+        <span id="connDot" class="w-2.5 h-2.5 rounded-full bg-slate-500 shrink-0"></span>
+        <span class="font-bold">🎤 Party Karaoke</span>
+        <span id="roomLabel" class="text-xs text-slate-400 truncate"></span>
+      </div>
+      <div class="flex gap-1.5 shrink-0">
+        <input id="nameInput" placeholder="ชื่อคุณ" maxlength="20" class="w-24 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-pink-500">
+        <button onclick="shareRoom()" class="px-2 bg-slate-800 rounded-lg text-xs">🔗</button>
       </div>
     </div>
-
-    <!-- โหมดรีโมท (มือถือ): ไม่เล่นเสียง -->
-    <div id="remoteBox" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-3">
-      <div class="min-w-0">
-        <span class="text-xs text-pink-400 font-semibold tracking-wider uppercase">กำลังเล่นอยู่ (เสียงออกที่จอหลัก)</span>
-        <h2 class="np-title text-white font-bold truncate">ยังไม่ได้เล่นเพลง</h2>
-      </div>
-      <button onclick="skipSong()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-medium flex items-center gap-1 shrink-0">
-        <i data-lucide="skip-forward" class="w-4 h-4"></i> ข้ามเพลง</button>
-    </div>
-
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
-      <div class="text-xs text-slate-400">🎤 <span class="text-slate-200">วิธีใช้:</span> เปิดหน้านี้บนทีวี/คอมเป็น "จอหลัก" แล้วให้เพื่อนสแกน QR เพื่อเพิ่มเพลงจากมือถือ</div>
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 space-y-2">
       <div class="flex items-center gap-2">
-        <button onclick="sendReaction('🔥')" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl hover:scale-110 transition">🔥</button>
-        <button onclick="sendReaction('👏')" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl hover:scale-110 transition">👏</button>
-        <button onclick="sendReaction('🎤')" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl hover:scale-110 transition">🎤</button>
-        <button onclick="sendReaction('🍻')" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl hover:scale-110 transition">🍻</button>
+        <div class="min-w-0 flex-1"><p class="text-[10px] text-pink-400 font-semibold">กำลังเล่นบนจอ</p><p id="npTitle" class="text-sm font-semibold truncate">ยังไม่มีเพลง</p></div>
+        <button id="pauseBtn" onclick="togglePause()" class="w-11 h-11 bg-slate-800 rounded-xl text-lg">⏸</button>
+        <button onclick="skipSong()" class="w-11 h-11 bg-slate-800 rounded-xl text-lg">⏭</button>
       </div>
+      <div class="flex justify-between">
+        <button onclick="sendReaction('🔥')" class="flex-1 text-2xl py-1 active:scale-125 transition">🔥</button>
+        <button onclick="sendReaction('👏')" class="flex-1 text-2xl py-1 active:scale-125 transition">👏</button>
+        <button onclick="sendReaction('🎤')" class="flex-1 text-2xl py-1 active:scale-125 transition">🎤</button>
+        <button onclick="sendReaction('🍻')" class="flex-1 text-2xl py-1 active:scale-125 transition">🍻</button>
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <input id="q" placeholder="ค้นหาเพลง หรือวางลิงก์ YouTube" class="flex-1 min-w-0 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-pink-500">
+      <button onclick="doSearch()" class="px-4 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl text-sm font-medium">ค้นหา</button>
+    </div>
+    <label class="flex items-center gap-2 text-xs text-slate-400"><input type="checkbox" id="kar" checked class="accent-pink-500"> เติมคำว่า "คาราโอเกะ" ให้อัตโนมัติ</label>
+    <div class="grid grid-cols-3 gap-1 text-xs">
+      <button data-tab="search" onclick="tab('search')" class="py-2 rounded-lg">🔍 ผลค้นหา</button>
+      <button data-tab="chart" onclick="tab('chart')" class="py-2 rounded-lg">📈 ชาร์ตยอดนิยม</button>
+      <button data-tab="queue" onclick="tab('queue')" id="tabQueue" class="py-2 rounded-lg">🎶 คิว</button>
     </div>
   </div>
-
-  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col h-[700px] space-y-4">
-    <div class="space-y-3">
-      <h2 class="font-bold text-white flex items-center justify-between"><span>คิวเพลงปาร์ตี้</span>
-        <span id="queueCount" class="text-xs bg-pink-500/20 text-pink-400 px-2 py-0.5 rounded-full">0 เพลง</span></h2>
-      <div class="space-y-2">
-        <input type="text" id="songTitleInput" placeholder="ชื่อเพลง (เช่น ทรงอย่างแบด)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-pink-500">
-        <div class="flex gap-2">
-          <input type="text" id="songUrlInput" placeholder="วางลิงก์ YouTube (ไม่ใส่ก็ได้)" class="flex-1 min-w-0 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-pink-500">
-          <button onclick="addSong()" class="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white px-4 py-2 rounded-xl text-sm font-medium shadow-lg shadow-pink-500/20 transition shrink-0">เพิ่มคิว</button>
-        </div>
-        <button onclick="searchTitle()" class="w-full text-xs text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-800 rounded-xl py-1.5 transition">🔍 ค้นหาคาราโอเกะของเพลงนี้บน YouTube (แล้วคัดลอกลิงก์มาวาง)</button>
-      </div>
-    </div>
-
-    <div>
-      <p class="text-xs text-pink-400 font-semibold mb-2 flex items-center gap-1.5"><i data-lucide="sparkles" class="w-3.5 h-3.5"></i> เพลงยอดนิยม (กดเพื่อเพิ่มชื่อเข้าคิว):</p>
-      <div class="flex flex-wrap gap-1.5">
-        <button onclick="addPreset('ทรงอย่างแบด')" class="px-2.5 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs transition">🎸 ทรงอย่างแบด</button>
-        <button onclick="addPreset('Stand by หล่อ')" class="px-2.5 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs transition">✨ Stand by หล่อ</button>
-        <button onclick="addPreset('เลือดกรุ๊ปบี')" class="px-2.5 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs transition">🩸 เลือดกรุ๊ปบี</button>
-        <button onclick="addPreset('ธาตุทองซาวด์')" class="px-2.5 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs transition">🪄 ธาตุทองซาวด์</button>
-      </div>
-    </div>
-
-    <div class="flex-1 flex flex-col min-h-0 border-t border-slate-800 pt-3">
-      <p class="text-xs text-slate-400 font-medium mb-2">คิวเพลงที่รอเล่น:</p>
-      <div id="queueList" class="flex-1 overflow-y-auto space-y-1.5 pr-1 divide-y divide-slate-800/50"></div>
-    </div>
-  </div>
-</main>
-
-<div id="toast" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-slate-800 border border-slate-700 text-sm text-slate-100 px-4 py-2 rounded-xl shadow-2xl max-w-[90vw]"></div>
-
-<div id="qrModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl">
-    <h3 class="font-bold text-lg text-white">สแกนเพื่อเพิ่มเพลงจากมือถือ</h3>
-    <div id="qrcode" class="bg-white p-4 rounded-xl inline-block mx-auto w-56"></div>
-    <p class="text-xs text-slate-400 break-all" id="roomLinkText"></p>
-    <p id="fileWarn" class="hidden text-xs text-amber-400">⚠ ตอนนี้เปิดไฟล์จากเครื่องโดยตรง มือถือจะเปิดลิงก์นี้ไม่ได้ ต้องอัปโหลดไฟล์ขึ้นเว็บโฮสต์ก่อน (เช่น GitHub Pages, Netlify, Firebase Hosting)</p>
-    <button onclick="closeRoomQR()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm font-medium text-slate-200 transition">ปิดหน้าต่าง</button>
+  <div class="p-3 pb-20">
+    <div id="pane-search" class="space-y-2"><p class="text-center text-xs text-slate-500 py-8">พิมพ์ชื่อเพลงแล้วกดค้นหา</p></div>
+    <div id="pane-chart" class="hidden space-y-2"></div>
+    <div id="pane-queue" class="hidden space-y-2"></div>
   </div>
 </div>
+
+<div id="toast" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-slate-800 border border-slate-700 text-sm px-4 py-2 rounded-xl shadow-2xl max-w-[90vw] text-center"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getDatabase, ref, set, onValue, push, remove, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+/* ======= ตั้งค่า ======= */
+const YT_API_KEY = 'AIzaSyBI8LB_SVdGZXsDRb5YVYzqy7KZJAQtjoo';   // <-- ใส่ YouTube Data API v3 key ที่นี่ (ดูวิธีสร้างในคำอธิบาย)
+const CHART_REGION = 'TH';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCpDMmqAYSuGLXcZlE6nH-Y1m87x3sPP7o",
@@ -130,17 +99,15 @@ const firebaseConfig = {
 };
 const db = getDatabase(initializeApp(firebaseConfig));
 
-/* ---------- helpers ---------- */
+/* ======= helpers ======= */
 const $ = id => document.getElementById(id);
-const icons = () => window.lucide && lucide.createIcons();
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dec = s => { const t = document.createElement('textarea'); t.innerHTML = s; return t.value; };
 let toastTimer;
-function toast(msg) {
-  const t = $('toast'); t.textContent = msg; t.classList.remove('hidden');
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('hidden'), 3500);
-}
+function toast(m) { const t = $('toast'); t.textContent = m; t.classList.remove('hidden'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('hidden'), 3000); }
 const guard = p => Promise.resolve(p).catch(e => toast('บันทึกไม่ได้: ' + (e.code || e.message)));
-const searchUrl = t => 'https://www.youtube.com/results?search_query=' + encodeURIComponent(t + ' คาราโอเกะ');
+const dbErr = e => toast('เชื่อมต่อฐานข้อมูลไม่ได้: ' + (e.code || e.message) + ' (ตรวจ Rules ของ Firebase)');
+const watchUrl = id => 'https://www.youtube.com/watch?v=' + id;
 
 function videoId(u) {
   try {
@@ -157,105 +124,97 @@ function videoId(u) {
   } catch { return null; }
 }
 
-/* ---------- room / mode ---------- */
+/* ======= ห้อง / โหมด ======= */
 const params = new URLSearchParams(location.search);
-const roomId = (params.get('room') || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 30)
-  || 'PARTY-' + Math.random().toString(36).slice(2, 6).toUpperCase();
-const isRemote = params.get('remote') === '1';
-try { params.set('room', roomId); history.replaceState(null, '', '?' + params.toString()); } catch {}   // รีเฟรชแล้วยังอยู่ห้องเดิม
+const roomId = (params.get('room') || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 30) || 'PARTY-' + Math.random().toString(36).slice(2, 6).toUpperCase();
+const isMain = params.get('remote') !== '1';          // ไม่มี remote=1 = จอหลัก, QR พามือถือเข้าโหมดรีโมท
+try { params.set('room', roomId); history.replaceState(null, '', '?' + params.toString()); } catch {}
 const baseUrl = location.href.split(/[?#]/)[0];
-
-$('roomDisplay').textContent = `ห้อง: #${roomId}`;
-$('modeBadge').textContent = isRemote ? 'รีโมท (ไม่เล่นเสียง)' : 'จอหลัก';
-const ml = $('modeLink');
-ml.textContent = isRemote ? 'เปิดเป็นจอหลัก' : 'สลับเป็นรีโมท';
-ml.href = `${baseUrl}?room=${roomId}` + (isRemote ? '' : '&remote=1');
-if (isRemote) { $('playerBox').classList.add('hidden'); $('remoteBox').classList.remove('hidden'); }
-else if (location.protocol === 'file:') toast('เปิดจากไฟล์ในเครื่อง YouTube อาจไม่ยอมเล่น ให้เปิดผ่านเว็บโฮสต์แทน');
+const phoneLink = `${baseUrl}?room=${roomId}&remote=1`;
 
 const queueRef = ref(db, `rooms/${roomId}/queue`);
 const stateRef = ref(db, `rooms/${roomId}/state`);
 const reactionRef = ref(db, `rooms/${roomId}/reactions`);
 
-let queue = [], currentSong = null, queueLoaded = false, stateLoaded = false;
-const dbErr = e => toast('เชื่อมต่อฐานข้อมูลไม่ได้: ' + (e.code || e.message) + ' (ตรวจสอบ Rules ของ Firebase)');
+let queue = [], currentSong = null, paused = false, queueLoaded = false, stateLoaded = false;
 
-/* ---------- connection status ---------- */
-onValue(ref(db, '.info/connected'), s => {
-  const on = !!s.val();
-  $('connDot').className = 'w-2 h-2 rounded-full ' + (on ? 'bg-emerald-400 animate-pulse' : 'bg-red-500');
-  $('connText').textContent = on ? 'Online Sync' : 'ออฟไลน์';
-  $('connStatus').className = 'px-3 py-1.5 rounded-lg text-xs font-medium border flex items-center gap-1.5 ' +
-    (on ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-red-500/10 text-red-400 border-red-500/30');
-});
+$(isMain ? 'mainView' : 'phoneView').classList.remove('hidden');
+$('roomLabel').textContent = '#' + roomId;
+$('roomCode').textContent = 'ห้อง #' + roomId;
 
-/* ---------- listeners ---------- */
+/* ======= listeners ======= */
+onValue(ref(db, '.info/connected'), s => { $('connDot').className = 'w-2.5 h-2.5 rounded-full shrink-0 ' + (s.val() ? 'bg-emerald-400' : 'bg-red-500'); });
+
 onValue(queueRef, snap => {
   const d = snap.val() || {};
-  queue = Object.keys(d).map(k => ({ id: k, ...d[k] }));
+  queue = Object.keys(d).map(k => ({ id: k, ...d[k] })).sort((a, b) => (a.ts || 0) - (b.ts || 0));
   queueLoaded = true;
-  renderQueue(); maybeAdvance();
+  if (isMain) { updateIdle(); maybeAdvance(); } else renderQueue();
 }, dbErr);
 
 onValue(stateRef, snap => {
   const s = snap.val();
   const next = s && s.current ? s.current : null;
-  const sig = x => x ? `${x.id}|${x.url || ''}` : '';
+  const sig = x => x ? `${x.id || ''}|${x.url || ''}` : '';
   const changed = sig(next) !== sig(currentSong);
-  currentSong = next; stateLoaded = true;
-  if (changed || !stateLoaded) showSong(currentSong);
-  else updateTitles();
-  maybeAdvance();
+  currentSong = next; paused = !!(s && s.paused); stateLoaded = true;
+  if (isMain) { if (changed) showSong(next); else applyPause(); updateIdle(); maybeAdvance(); }
+  else updateNow();
 }, dbErr);
+
 let firstReaction = true;
 onValue(reactionRef, snap => {
   const r = snap.val();
-  if (firstReaction) { firstReaction = false; return; }          // ไม่เล่นอีโมจิเก่าตอนเพิ่งเข้าห้อง
-  if (r && r.emoji && Date.now() - r.timestamp < 8000) showFloatingEmoji(r.emoji);
+  if (firstReaction) { firstReaction = false; return; }
+  if (isMain && r && r.emoji && Date.now() - r.timestamp < 8000) floatEmoji(r.emoji);
 });
 
-/* ---------- queue actions ---------- */
-function maybeAdvance() { if (queueLoaded && stateLoaded && !currentSong && queue.length) advance(); }
-
+/* ======= การเล่น / คิว (ใช้ร่วมกัน) ======= */
+function maybeAdvance() { if (isMain && queueLoaded && stateLoaded && !currentSong && queue.length) advance(); }
 async function advance() {
   const next = queue[0]; if (!next) return;
   try {
-    // transaction: หลายเครื่องเปิดพร้อมกัน มีเครื่องเดียวที่ดึงเพลงถัดไปสำเร็จ
     const res = await runTransaction(stateRef, cur => (cur && cur.current) ? undefined : { current: next });
     if (res.committed) guard(remove(ref(db, `rooms/${roomId}/queue/${next.id}`)));
   } catch (e) { dbErr(e); }
 }
-
-window.skipSong = function () {
+window.skipSong = () => {
   const next = queue[0];
   if (next) { guard(set(stateRef, { current: next })); guard(remove(ref(db, `rooms/${roomId}/queue/${next.id}`))); }
   else guard(set(stateRef, null));
 };
-
-window.addSong = function () {
-  const ti = $('songTitleInput'), ui = $('songUrlInput');
-  const title = ti.value.trim(), url = ui.value.trim();
-  if (!title && !url) return toast('ใส่ชื่อเพลงหรือวางลิงก์ก่อนนะ');
-  if (url && !videoId(url)) return toast('ลิงก์ YouTube ไม่ถูกต้อง ลองคัดลอกใหม่อีกครั้ง');
-  guard(push(queueRef, { title: title || 'เพลงจาก YouTube', url, addedBy: isRemote ? 'มือถือ' : 'จอหลัก' }));
-  ti.value = ''; ui.value = '';
-};
-window.addPreset = title => { guard(push(queueRef, { title, url: '', addedBy: 'แนะนำ' })); toast(`เพิ่ม "${title}" เข้าคิวแล้ว`); };
+window.togglePause = () => { if (currentSong) guard(set(ref(db, `rooms/${roomId}/state/paused`), !paused)); };
+window.sendReaction = e => guard(set(reactionRef, { emoji: e, timestamp: Date.now() }));
 window.removeSong = id => guard(remove(ref(db, `rooms/${roomId}/queue/${id}`)));
-window.searchTitle = () => {
-  const t = $('songTitleInput').value.trim();
-  if (!t) return toast('พิมพ์ชื่อเพลงก่อนนะ');
-  window.open(searchUrl(t), '_blank', 'noopener');
-};
-window.setCurrentUrl = () => {
-  const u = $('currentUrlInput').value.trim();
-  if (!videoId(u)) return toast('ลิงก์ YouTube ไม่ถูกต้อง');
-  guard(set(ref(db, `rooms/${roomId}/state/current/url`), u));
-};
-['songTitleInput', 'songUrlInput'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') addSong(); }));
+window.moveUp = id => { const f = queue[0]; if (f && f.id !== id) guard(set(ref(db, `rooms/${roomId}/queue/${id}/ts`), (f.ts || Date.now()) - 1)); };
 
-/* ---------- player (YouTube IFrame API) ---------- */
-let player = null, playToken = 0, ytPromise = null;
+/* ======= จอหลัก ======= */
+let player = null, playToken = 0, ytPromise = null, started = false, peek = false, titleTimer, peekTimer;
+
+(function () {
+  if (!isMain) return;
+  try { const q = qrcode(0, 'M'); q.addData(phoneLink); q.make(); $('qrBig').innerHTML = q.createSvgTag({ scalable: true }); } catch { $('qrBig').textContent = phoneLink; }
+  if (location.protocol === 'file:') toast('เปิดจากไฟล์ในเครื่อง YouTube/มือถืออาจใช้ไม่ได้ ให้เปิดผ่านเว็บโฮสต์');
+  $('mainView').addEventListener('click', e => {           // แตะจอ = โชว์ QR ชั่วคราว ให้คนมาใหม่สแกน
+    if (!started || !currentSong || e.target.closest('button')) return;
+    peek = !peek; clearTimeout(peekTimer); if (peek) peekTimer = setTimeout(() => { peek = false; updateIdle(); }, 10000);
+    updateIdle();
+  });
+})();
+
+function updateIdle() {
+  if (!isMain) return;
+  $('idleScreen').classList.toggle('hidden', started && !!currentSong && !peek);
+  $('startBtn').classList.toggle('hidden', started);
+  $('idleHint').textContent = currentSong ? `กำลังเล่น: ${currentSong.title}` : (queue.length ? 'กำลังโหลดเพลง...' : 'ยังไม่มีเพลงในคิว เพิ่มเพลงจากมือถือได้เลย');
+}
+window.userStart = async () => {
+  started = true; $('tapPlay').classList.add('hidden');
+  try { await document.documentElement.requestFullscreen(); } catch {}
+  try { await navigator.wakeLock.request('screen'); } catch {}
+  try { player && player.playVideo(); } catch {}
+  updateIdle();
+};
 function loadYT() {
   return ytPromise ||= new Promise(res => {
     if (window.YT && YT.Player) return res();
@@ -263,104 +222,169 @@ function loadYT() {
     const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(s);
   });
 }
-function updateTitles() {
-  document.querySelectorAll('.np-title').forEach(el => el.textContent = currentSong ? currentSong.title : 'ยังไม่ได้เล่นเพลง');
+function applyPause() {
+  try { if (!player || !player.getPlayerState) return; if (paused) player.pauseVideo(); else if (player.getPlayerState() === 2) player.playVideo(); } catch {}
 }
-window.tapToPlay = () => { try { player && player.playVideo(); } catch {} $('tapPlay').classList.add('hidden'); };
-
+function flashTitle(song) {
+  const nx = queue[0];
+  $('titleBarText').textContent = song.title;
+  $('titleBarSub').textContent = (song.addedBy ? `เลือกโดย ${song.addedBy}` : '') + (nx ? `${song.addedBy ? '  ·  ' : ''}ถัดไป: ${nx.title}` : '');
+  $('titleBar').classList.replace('opacity-0', 'opacity-100');
+  clearTimeout(titleTimer); titleTimer = setTimeout(() => $('titleBar').classList.replace('opacity-100', 'opacity-0'), 7000);
+}
 async function showSong(song) {
   const my = ++playToken;
-  updateTitles();
   $('tapPlay').classList.add('hidden');
-  if (isRemote) return;
   if (player) { try { player.destroy(); } catch {} player = null; }
-  const box = $('playerContainer');
-
-  if (!song) {
-    box.innerHTML = `<div class="text-center p-6 text-slate-400 space-y-2"><i data-lucide="music" class="w-12 h-12 mx-auto opacity-40 animate-bounce"></i>
-      <p class="text-sm">ยังไม่มีเพลงในคิว เพิ่มเพลงจากฝั่งขวาหรือสแกน QR ได้เลย!</p></div>`;
-    return icons();
-  }
+  const box = $('playerContainer'); box.innerHTML = '';
+  if (!song) { $('titleBar').classList.replace('opacity-100', 'opacity-0'); return; }
   const id = videoId(song.url);
-  if (!id) {
-    box.innerHTML = `<div class="text-center p-6 space-y-3 w-full max-w-md">
-      <p class="text-sm text-slate-300">เพลง "${esc(song.title)}" ยังไม่มีลิงก์ YouTube</p>
-      <a href="${searchUrl(song.title)}" target="_blank" rel="noopener" class="inline-block px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-sm font-medium transition">🔍 ค้นหาบน YouTube</a>
-      <div class="flex gap-2"><input id="currentUrlInput" placeholder="วางลิงก์ที่เลือกแล้วตรงนี้" class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm">
-      <button onclick="setCurrentUrl()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-sm">เล่น</button></div></div>`;
-    return icons();
-  }
+  if (!id) { toast('ลิงก์เพลงไม่ถูกต้อง ข้ามไปเพลงถัดไป'); setTimeout(() => my === playToken && skipSong(), 1500); return; }
   box.innerHTML = '<div id="ytTarget" class="w-full h-full"></div>';
+  flashTitle(song);
   await loadYT();
   if (my !== playToken) return;
   player = new YT.Player('ytTarget', {
     width: '100%', height: '100%', videoId: id,
-    playerVars: { autoplay: 1, rel: 0, playsinline: 1 },
+    playerVars: { autoplay: 1, controls: 0, rel: 0, playsinline: 1, modestbranding: 1, iv_load_policy: 3, disablekb: 1, fs: 0 },
     events: {
-      onReady: e => { e.target.playVideo(); setTimeout(() => {
+      onReady: e => { e.target.playVideo(); applyPause(); setTimeout(() => {
         if (my !== playToken) return;
-        try { const st = player.getPlayerState(); if (st !== 1 && st !== 3) $('tapPlay').classList.remove('hidden'); } catch {}
+        try { const st = player.getPlayerState(); if (st !== 1 && st !== 3 && !paused) $('tapPlay').classList.remove('hidden'); } catch {}
       }, 2500); },
       onStateChange: e => {
         if (e.data === 1) $('tapPlay').classList.add('hidden');
-        if (e.data === 0 && my === playToken) skipSong();            // เพลงจบ -> เล่นเพลงถัดไปอัตโนมัติ
+        if (e.data === 0 && my === playToken) skipSong();       // เพลงจบ -> เพลงถัดไป
       },
-      onError: () => {
-        if (my !== playToken) return;
-        box.innerHTML = `<div class="text-center p-6 space-y-3"><p class="text-sm text-slate-300">วิดีโอนี้เล่นในหน้านี้ไม่ได้ (เจ้าของปิดการฝัง หรือถูกลบ)</p>
-          <a href="https://www.youtube.com/watch?v=${id}" target="_blank" rel="noopener" class="inline-block px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-sm font-medium">เปิดบน YouTube</a>
-          <button onclick="skipSong()" class="ml-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-sm">ข้ามเพลง</button></div>`;
-      }
+      onError: () => { if (my !== playToken) return; toast('เพลงนี้เล่นไม่ได้ ข้ามไปเพลงถัดไป'); setTimeout(() => my === playToken && skipSong(), 2000); }
     }
   });
 }
-
-/* ---------- reactions ---------- */
-window.sendReaction = emoji => guard(set(reactionRef, { emoji, timestamp: Date.now() }));
-function showFloatingEmoji(emoji) {
-  const c = $('floatingReactions'); if (!c || isRemote) return;
-  const el = document.createElement('div');
+function floatEmoji(emoji) {
+  const c = $('floatingReactions'), el = document.createElement('div');
   el.textContent = emoji;
-  el.className = 'absolute text-3xl transition-all duration-1000 bottom-4 z-30';
+  el.className = 'absolute text-6xl md:text-8xl transition-all duration-[1500ms] ease-out bottom-10';
   el.style.left = Math.random() * 80 + 10 + '%';
   c.appendChild(el);
-  setTimeout(() => { el.style.transform = 'translateY(-250px) scale(1.5)'; el.style.opacity = '0'; }, 50);
-  setTimeout(() => el.remove(), 1200);
+  setTimeout(() => { el.style.transform = 'translateY(-60vh) scale(1.4)'; el.style.opacity = '0'; }, 50);
+  setTimeout(() => el.remove(), 1700);
 }
 
-/* ---------- queue UI ---------- */
-function renderQueue() {
-  $('queueCount').textContent = `${queue.length} เพลง`;
-  const list = $('queueList');
-  if (!queue.length) { list.innerHTML = '<div class="text-center py-6 text-xs text-slate-500">ยังไม่มีคิวเพลงในระบบ</div>'; return; }
-  list.innerHTML = queue.map((s, i) => `
-    <div class="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-800/50 transition">
-      <div class="flex items-center gap-3 overflow-hidden">
-        <span class="text-xs font-bold text-slate-500 w-4">${i + 1}</span>
-        <div class="truncate">
-          <p class="text-xs font-medium text-slate-200 truncate">${esc(s.title)}</p>
-          <p class="text-[10px] text-slate-400">เพิ่มโดย: ${esc(s.addedBy || 'เพื่อน')}${s.url ? '' : ' · <span class="text-amber-400">ยังไม่มีลิงก์</span>'}</p>
-        </div>
-      </div>
-      <button onclick="removeSong('${esc(s.id)}')" class="p-1.5 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-lg transition shrink-0">
-        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-    </div>`).join('');
-  icons();
-}
+/* ======= มือถือ ======= */
+const known = new Map(), addedSet = new Set();
+let chartLoaded = false, lastSearch = [], chartItems = [];
 
-/* ---------- QR ---------- */
-window.showRoomQR = function () {
-  const m = $('qrModal'); m.classList.remove('hidden'); m.classList.add('flex');
-  const link = `${baseUrl}?room=${roomId}&remote=1`;          // มือถือเข้าเป็นโหมดรีโมท จะได้ไม่เล่นเสียงซ้ำ
-  $('roomLinkText').textContent = link;
-  $('fileWarn').classList.toggle('hidden', location.protocol !== 'file:');
-  const qc = $('qrcode'); qc.innerHTML = '';
-  try { const qr = qrcode(0, 'M'); qr.addData(link); qr.make(); qc.innerHTML = qr.createSvgTag({ scalable: true }); }
-  catch { qc.textContent = link; }
+function myName() { try { return $('nameInput').value.trim() || 'เพื่อน'; } catch { return 'เพื่อน'; } }
+function updateNow() {
+  $('npTitle').textContent = currentSong ? currentSong.title : 'ยังไม่มีเพลง';
+  $('pauseBtn').textContent = paused ? '▶' : '⏸';
+}
+window.tab = n => {
+  ['search', 'chart', 'queue'].forEach(t => {
+    $('pane-' + t).classList.toggle('hidden', t !== n);
+    document.querySelector(`[data-tab="${t}"]`).className = 'py-2 rounded-lg ' + (t === n ? 'bg-pink-600 text-white' : 'bg-slate-900 text-slate-300');
+  });
+  if (n === 'chart') loadChart();
 };
-window.closeRoomQR = () => { const m = $('qrModal'); m.classList.add('hidden'); m.classList.remove('flex'); };
+window.shareRoom = async () => {
+  try { if (navigator.share) return await navigator.share({ title: 'Party Karaoke', url: phoneLink }); } catch { return; }
+  try { await navigator.clipboard.writeText(phoneLink); toast('คัดลอกลิงก์ห้องแล้ว'); } catch { toast(phoneLink); }
+};
 
-showSong(null); icons();
+async function yt(path, q) {
+  if (!YT_API_KEY) throw { code: 'nokey' };
+  const r = await fetch(`https://www.googleapis.com/youtube/v3/${path}?` + new URLSearchParams({ ...q, key: YT_API_KEY }));
+  const j = await r.json();
+  if (!r.ok) throw { code: (j.error && j.error.errors && j.error.errors[0].reason) || r.status, message: j.error && j.error.message };
+  return j;
+}
+function ytErr(e) {
+  if (e.code === 'nokey') return 'ยังไม่ได้ตั้งค่า YouTube API Key — ตอนนี้วางลิงก์ YouTube ในช่องค้นหาเพื่อเพิ่มเพลงได้';
+  if (e.code === 'quotaExceeded') return 'โควตาค้นหาของ YouTube วันนี้หมดแล้ว (รีเซ็ตทุกวัน) ลองวางลิงก์แทนได้';
+  if (/key|referer/i.test(String(e.code))) return 'API Key ใช้ไม่ได้ ตรวจว่าเปิด YouTube Data API v3 และอนุญาตโดเมนเว็บนี้แล้ว';
+  return 'ค้นหาไม่สำเร็จ: ' + (e.message || e.code || 'ไม่ทราบสาเหตุ');
+}
+const msg = (el, t) => el.innerHTML = `<p class="text-center text-xs text-slate-400 py-8">${esc(t)}</p>`;
+const thumb = id => `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
+
+function addBtn(vid) {
+  return addedSet.has(vid) ? '<span class="text-[11px] text-emerald-400 px-2 py-1 text-center">✓ เพิ่มแล้ว</span>'
+    : `<button onclick="addVid('${vid}')" class="px-3 py-1.5 bg-pink-600 rounded-lg text-xs font-medium">+ เพิ่ม</button>`;
+}
+function rowHtml(it, extra = '') {
+  known.set(it.vid, it);
+  return `<div class="flex items-center gap-3 p-2 rounded-xl bg-slate-900 border border-slate-800">
+    <img src="${thumb(it.vid)}" loading="lazy" class="w-24 aspect-video object-cover rounded-lg shrink-0 bg-slate-800">
+    <div class="min-w-0 flex-1"><p class="text-xs font-medium line-clamp-2">${esc(it.title)}</p><p class="text-[10px] text-slate-400 truncate">${esc(it.channel)}</p></div>
+    <div class="flex flex-col gap-1 shrink-0">${addBtn(it.vid)}${extra}</div></div>`;
+}
+const renderSearch = () => $('pane-search').innerHTML = lastSearch.length ? lastSearch.map(i => rowHtml(i)).join('') : '';
+const renderChart = () => $('pane-chart').innerHTML =
+  `<a href="https://charts.youtube.com/charts/TopSongs/${CHART_REGION.toLowerCase()}" target="_blank" rel="noopener" class="block text-center text-xs text-pink-400 py-1">ดูชาร์ตเต็มบน YouTube Charts ↗</a>` +
+  chartItems.map(i => rowHtml(i, `<button onclick="karaokeFor('${i.vid}')" class="px-2 py-1.5 bg-slate-800 rounded-lg text-[11px]">🎤 หาคาราโอเกะ</button>`)).join('');
+
+window.doSearch = async () => {
+  let q = $('q').value.trim(); if (!q) return;
+  tab('search');
+  const id = videoId(q);
+  if (id) return addByLink(id);
+  const el = $('pane-search');
+  if (!YT_API_KEY) return msg(el, ytErr({ code: 'nokey' }));
+  msg(el, 'กำลังค้นหา...');
+  if ($('kar').checked && !/คาราโอเกะ|karaoke/i.test(q)) q += ' คาราโอเกะ';
+  try {
+    const j = await yt('search', { part: 'snippet', type: 'video', maxResults: 15, videoEmbeddable: 'true', videoSyndicated: 'true', relevanceLanguage: 'th', q });
+    lastSearch = j.items.map(i => ({ vid: i.id.videoId, title: dec(i.snippet.title), channel: dec(i.snippet.channelTitle) }));
+    lastSearch.length ? renderSearch() : msg(el, 'ไม่พบเพลง ลองคำค้นอื่น');
+  } catch (e) { msg(el, ytErr(e)); }
+};
+async function loadChart() {
+  if (chartLoaded) return;
+  const el = $('pane-chart');
+  if (!YT_API_KEY) { msg(el, ytErr({ code: 'nokey' })); el.insertAdjacentHTML('beforeend', `<a href="https://charts.youtube.com/charts/TopSongs/${CHART_REGION.toLowerCase()}" target="_blank" rel="noopener" class="block text-center text-sm text-pink-400">เปิดชาร์ตบน YouTube ↗</a>`); return; }
+  msg(el, 'กำลังโหลดชาร์ต...');
+  try {
+    const j = await yt('videos', { part: 'snippet', chart: 'mostPopular', videoCategoryId: '10', regionCode: CHART_REGION, maxResults: 25 });
+    chartItems = j.items.map(i => ({ vid: i.id, title: dec(i.snippet.title), channel: dec(i.snippet.channelTitle) }));
+    chartLoaded = true; renderChart();
+  } catch (e) { msg(el, ytErr(e)); }
+}
+window.karaokeFor = vid => { const it = known.get(vid); if (!it) return; $('q').value = it.title; $('kar').checked = true; doSearch(); };
+
+function pushSong(vid, title) {
+  guard(push(queueRef, { title, url: watchUrl(vid), ts: Date.now(), addedBy: myName() }));
+  addedSet.add(vid); toast('เพิ่ม "' + title + '" เข้าคิวแล้ว');
+  if (lastSearch.length) renderSearch(); if (chartLoaded) renderChart();
+}
+window.addVid = vid => { const it = known.get(vid); if (it) pushSong(vid, it.title); };
+async function addByLink(vid) {
+  let title = 'เพลงจาก YouTube';
+  try { const j = await yt('videos', { part: 'snippet', id: vid }); if (j.items[0]) title = dec(j.items[0].snippet.title); } catch {}
+  pushSong(vid, title); $('q').value = '';
+}
+
+function renderQueue() {
+  $('tabQueue').textContent = `🎶 คิว (${queue.length})`;
+  const el = $('pane-queue');
+  if (!queue.length) return msg(el, 'ยังไม่มีเพลงในคิว');
+  el.innerHTML = queue.map((s, i) => {
+    const id = videoId(s.url);
+    return `<div class="flex items-center gap-3 p-2 rounded-xl bg-slate-900 border border-slate-800">
+      <span class="text-xs font-bold text-slate-500 w-4 text-center">${i + 1}</span>
+      ${id ? `<img src="${thumb(id)}" loading="lazy" class="w-20 aspect-video object-cover rounded-lg shrink-0 bg-slate-800">` : ''}
+      <div class="min-w-0 flex-1"><p class="text-xs font-medium line-clamp-2">${esc(s.title)}</p><p class="text-[10px] text-slate-400">เพิ่มโดย ${esc(s.addedBy || 'เพื่อน')}</p></div>
+      <div class="flex flex-col gap-1 shrink-0">
+        ${i > 0 ? `<button onclick="moveUp('${esc(s.id)}')" class="px-2 py-1 bg-slate-800 rounded-lg text-xs">⬆ ขึ้นก่อน</button>` : ''}
+        <button onclick="removeSong('${esc(s.id)}')" class="px-2 py-1 bg-slate-800 text-red-400 rounded-lg text-xs">🗑 ลบ</button>
+      </div></div>`;
+  }).join('');
+}
+if (!isMain) {
+  try { $('nameInput').value = localStorage.getItem('karaokeName') || ''; } catch {}
+  $('nameInput').addEventListener('change', () => { try { localStorage.setItem('karaokeName', $('nameInput').value.trim()); } catch {} });
+  $('q').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+  tab('search'); updateNow(); renderQueue();
+}
 </script>
 </body>
 </html>
