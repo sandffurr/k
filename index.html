@@ -210,6 +210,15 @@ button:disabled{opacity:.45}
         </div>
       </div>
       <div class="card p-4 space-y-3">
+        <div class="flex items-center justify-between"><p class="label">ระดับเสียงจอหลัก</p><span id="volLabel" class="text-sm font-bold text-white tabular-nums">100%</span></div>
+        <div class="flex items-center gap-2">
+          <button onclick="volBy(-10)" class="chip !px-4">−</button>
+          <input id="volSlider" type="range" min="0" max="100" step="5" value="100" class="flex-1 accent-pink-500" oninput="volDrag(this.value)" onchange="volSet(this.value)">
+          <button onclick="volBy(10)" class="chip !px-4">+</button>
+        </div>
+        <p class="label">ปรับเสียงเพลงและเอฟเฟกต์ที่ออกจากจอหลัก (เสียงจริงยังขึ้นกับระดับเสียงของทีวี/คอมด้วย)</p>
+      </div>
+      <div class="card p-4 space-y-3">
         <p class="label">การแสดงผลบนจอหลัก</p>
         <div class="flex items-center justify-between gap-3">
           <div><p class="text-sm font-medium">แสดงคิวเพลงบนจอ</p><p class="label mt-0.5">รายการเพลงที่รออยู่ ด้านขวาของจอ</p></div>
@@ -288,7 +297,10 @@ button:disabled{opacity:.45}
             <button id="btnQuizRand" onclick="switchQuizSource('rand')" data-on="1">🎲 สุ่มจากชาร์ต</button>
             <button id="btnQuizManual" onclick="switchQuizSource('manual')" data-on="0">🔍 หาเพลงเอง</button>
           </div>
-          <div id="boxQuizRand"><button onclick="quizNext()" class="grad w-full py-3.5 rounded-2xl font-bold text-sm">🎲 สุ่มเพลงถัดไป</button></div>
+          <div id="boxQuizRand" class="space-y-2">
+            <select id="quizCatSel" onchange="setQuizCat(this.value)" class="w-full pill px-4 py-3 text-sm outline-none"></select>
+            <p class="label">สุ่มจากแหล่งเพลงนี้ (ท็อปชาร์ต ยุค หรือแนวเพลง) ถ้าไม่ได้เตรียมไว้ จะสุ่มให้ตอนกดเริ่มข้อถัดไป</p>
+          </div>
           <div id="boxQuizManual" class="hidden space-y-2">
             <div class="flex items-center gap-2 pill pl-4 pr-1.5 py-1.5">
               <input id="quizManualInput" placeholder="ชื่อเพลง หรือลิงก์ YouTube" class="flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-slate-500">
@@ -296,6 +308,11 @@ button:disabled{opacity:.45}
             </div>
             <div id="quizManualResults" class="space-y-1.5 max-h-56 overflow-y-auto"></div>
           </div>
+        </div>
+        <div class="space-y-2.5">
+          <div class="flex items-center justify-between"><p class="label">ข้อที่เตรียมไว้ (<span id="prepCount">0</span>)</p><button onclick="prepFillRandom()" class="chip !py-1">+ สุ่มเพิ่ม 5 ข้อ</button></div>
+          <div id="quizPrepList" class="space-y-1.5"></div>
+          <button onclick="quizNext()" class="grad w-full py-3.5 rounded-2xl font-bold text-sm">▶ เริ่มข้อถัดไป</button>
         </div>
 
         <div class="space-y-2.5">
@@ -323,6 +340,10 @@ button:disabled{opacity:.45}
           <button onclick="sfx('clap')" class="chip">👏 ปรบมือ</button>
           <button onclick="sfx('drum')" class="chip">🥁 กลองรัว</button>
           <button onclick="quizResetScores()" class="chip !text-rose-400">🗑 ล้างคะแนน</button>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="volBy(-10)" class="chip">เสียงจอหลัก −</button>
+          <button onclick="volBy(10)" class="chip">เสียงจอหลัก +</button>
         </div>
       </div>
 
@@ -445,7 +466,7 @@ const posRef = ref(db, `rooms/${roomId}/pos`);
 const histRef = ref(db, `rooms/${roomId}/history`);
 const ccRef = ref(db, `rooms/${roomId}/cc`);
 
-let queue = [], currentSong = null, paused = false, ccEnabled = false, queueLoaded = false, stateLoaded = false, pos = { t: 0, d: 0 }, seeking = false, mode = 'karaoke', modeLoaded = false, quiz = { adminId: null, round: null, buzz: [], scores: [], game: {} };
+let queue = [], currentSong = null, paused = false, ccEnabled = false, queueLoaded = false, stateLoaded = false, pos = { t: 0, d: 0 }, seeking = false, mode = 'karaoke', modeLoaded = false, quiz = { adminId: null, round: null, buzz: [], scores: [], game: {}, prep: [] };
 
 $(isMain ? 'mainView' : 'phoneView').classList.remove('hidden');
 $('roomLabel').textContent = 'ห้อง #' + roomId;
@@ -492,12 +513,46 @@ onValue(reactionRef, snap => {
 
 /* ======= การเล่น / คิว (ใช้ร่วมกัน) ======= */
 let chartPool = [], autoUsed = new Set(), autoTimer = null, autoSkipTimer = null, autoToastShown = false;
-async function getChartPool() {
-  if (chartPool.length) return chartPool;
-  const j = await yt('videos', { part: 'snippet,contentDetails,status', chart: 'mostPopular', videoCategoryId: '10', regionCode: CHART_REGION, maxResults: 50 });
-  chartPool = j.items.filter(i => i.status && i.status.embeddable).map(i => ({ vid: i.id, title: dec(i.snippet.title), channel: dec(i.snippet.channelTitle), dur: isoSec(i.contentDetails.duration) })).filter(x => x.dur >= 100 && x.dur <= 480);
-  return chartPool;
+const CATS = [
+  { k: 'top', label: '🔥 ท็อปชาร์ต' },
+  { k: 'd80', label: 'ยุค 80', q: 'เพลงฮิต ยุค 80 ไทย' }, { k: 'd90', label: 'ยุค 90', q: 'เพลงฮิต ยุค 90 ไทย' },
+  { k: 'd00', label: 'ยุค 2000', q: 'เพลงฮิต ยุค 2000 ไทย' }, { k: 'd10', label: 'ยุค 2010', q: 'เพลงฮิต ยุค 2010 ไทย' },
+  { k: 'd20', label: 'ยุค 2020', q: 'เพลงฮิต 2020 ไทย ล่าสุด' },
+  { k: 'lt', label: 'ลูกทุ่ง', q: 'เพลงลูกทุ่ง ฮิต' }, { k: 'pop', label: 'ป๊อป', q: 'เพลงป๊อป ไทย ฮิต' },
+  { k: 'rock', label: 'ร็อก', q: 'เพลงร็อก ไทย ฮิต' }, { k: 'hip', label: 'ฮิปฮอป', q: 'เพลงฮิปฮอป แร็พ ไทย ฮิต' },
+  { k: 'slow', label: 'เพลงช้า', q: 'เพลงช้า เพลงเศร้า ไทย ฮิต' }, { k: 'dance', label: 'เพลงสนุก', q: 'เพลงสนุก เต้น ปาร์ตี้ ไทย' },
+  { k: 'indie', label: 'อินดี้', q: 'เพลงอินดี้ ไทย ฮิต' }, { k: 'int', label: 'สากล', q: 'เพลงสากล ฮิต' },
+  { k: 'old', label: 'เพลงเก่า/ลูกกรุง', q: 'เพลงเก่า ลูกกรุง ฮิต' }
+];
+const catMem = {};
+const readCatCache = k => { try { const c = JSON.parse(localStorage.getItem('kcat:' + k) || 'null'); return c && Date.now() - c.t < 3 * 86400000 ? c.items : null; } catch { return null; } };
+const writeCatCache = (k, items) => { try { localStorage.setItem('kcat:' + k, JSON.stringify({ t: Date.now(), items })); } catch {} };
+async function fetchCategory(k) {      // ท็อปชาร์ต = เพลงมาแรงหมวดดนตรี / หมวดอื่น = เพลย์ลิสต์ยอดนิยมที่ค้นเจอบน YouTube (เก็บในเครื่อง 3 วันเพื่อประหยัดโควตา)
+  if (k !== 'top') { const c = readCatCache(k); if (c && c.length) return c; }
+  const mk = v => ({ vid: v.id, title: dec(v.snippet.title), channel: dec(v.snippet.channelTitle), dur: isoSec(v.contentDetails.duration) });
+  let songs = [];
+  if (k === 'top') {
+    const j = await yt('videos', { part: 'snippet,contentDetails,status', chart: 'mostPopular', videoCategoryId: '10', regionCode: CHART_REGION, maxResults: 50 });
+    songs = (j.items || []).filter(i => i.status && i.status.embeddable).map(mk);
+  } else {
+    const cat = CATS.find(c => c.k === k);
+    const sr = await yt('search', { part: 'snippet', type: 'playlist', maxResults: 3, q: cat.q + ' playlist', relevanceLanguage: 'th', regionCode: CHART_REGION });
+    const ids = [];
+    for (const it of (sr.items || []).slice(0, 2)) {
+      try { const pj = await yt('playlistItems', { part: 'contentDetails', playlistId: it.id.playlistId, maxResults: 50 }); (pj.items || []).forEach(x => ids.push(x.contentDetails.videoId)); } catch {}
+    }
+    const uniq = [...new Set(ids)].slice(0, 100);
+    for (let i = 0; i < uniq.length; i += 50) {
+      const vj = await yt('videos', { part: 'snippet,contentDetails,status', id: uniq.slice(i, i + 50).join(',') });
+      (vj.items || []).forEach(v => { if (v.status && v.status.embeddable) songs.push(mk(v)); });
+    }
+    songs = songs.filter(x => x.dur >= 60 && x.dur <= 600);
+    if (songs.length) writeCatCache(k, songs);
+  }
+  return songs;
 }
+async function getCategoryPool(k) { if (!catMem[k]) catMem[k] = await fetchCategory(k); return catMem[k].filter(x => x.dur >= 100 && x.dur <= 480); }
+function getChartPool() { return getCategoryPool('top'); }
 async function autoFillSong() {      // คิวว่าง: หยิบเพลงจากชาร์ตมาเล่นต่อ ไม่ให้จอเงียบ
   try {
     const pool = await getChartPool();
@@ -579,7 +634,7 @@ window.userStart = async () => {
   try {
     if (player && player.playVideo) {
       player.unMute();
-      player.setVolume(100);
+      player.setVolume(ui.volume);
       player.playVideo();
     }
   } catch {}
@@ -628,10 +683,15 @@ function ensurePlaying(my) {      // รอให้เพลงโหลดเ�
 }
 let pre = null, preId = null, preReady = false, preTimer;
 function dropPre() { if (pre) { try { pre.destroy(); } catch {} } pre = null; preId = null; preReady = false; const b = $('preContainer'); if (b) b.innerHTML = ''; }
-function preloadNext() {      // โหลดเพลงคิวถัดไปไว้ในตัวเล่นสำรอง (ปิดเสียง) พอมีข้อมูลแล้วหยุดไว้ ให้เพลงถัดไปเริ่มเร็ว
-  if (!isMain || mode === 'quiz' || !started || !currentSong || !player || !(window.YT && YT.Player)) return;
-  try { const st = player.getPlayerState(); if (st !== 1 && st !== 2) return; } catch { return; }
-  const nx = queue[0], id = nx && videoId(nx.url);
+function nextTargetId() {
+  if (mode === 'quiz') { const p = quiz.prep && quiz.prep[0]; return p && p.vid; }
+  const nx = queue[0]; return nx && videoId(nx.url);
+}
+function preloadNext() {      // โหลดเพลง/ข้อถัดไปไว้ในตัวเล่นสำรอง (ปิดเสียง) พอมีข้อมูลแล้วหยุดไว้ ให้กดข้ามหรือจบเพลงแล้วต่อทันที
+  if (!isMain || !started || !(window.YT && YT.Player)) return;
+  if (mode === 'quiz') { if (quiz.game.over) return; } else if (!currentSong || !player) return;
+  if (player) { try { const st = player.getPlayerState(); if (st !== 1 && st !== 2) return; } catch { return; } }
+  const id = nextTargetId();
   if (!id) return dropPre();
   if (id === preId) return;
   dropPre(); preId = id;
@@ -642,25 +702,25 @@ function preloadNext() {      // โหลดเพลงคิวถัดไ�
     events: ytEvents()
   });
 }
-function swapToPre(my) {      // ตัวสำรองที่โหลดไว้แล้วขึ้นมาเป็นตัวหลักทันที (สลับกล่องแทนการย้าย iframe เพื่อไม่ให้โหลดใหม่)
+function swapToPre(my, startSec) {      // ตัวสำรองที่โหลดไว้แล้วขึ้นมาเป็นตัวหลักทันที (สลับกล่องแทนการย้าย iframe เพื่อไม่ให้โหลดใหม่)
   const A = $('playerContainer'), B = $('preContainer'), old = player;
   player = pre; pre = null; preId = null; preReady = false;
   A.id = 'preContainer'; B.id = 'playerContainer';
   A.classList.add('pre-box'); B.classList.remove('pre-box');
   try { old.destroy(); } catch {}
   A.innerHTML = '';
-  try { player.seekTo(0, true); player.unMute(); player.setVolume(100); player.playVideo(); applyCC(); } catch {}
+  try { player.seekTo(startSec || 0, true); player.unMute(); player.setVolume(ui.volume); player.playVideo(); applyCC(); } catch {}
   ensurePlaying(my);
 }
 function ytEvents() {
   return {
     onReady: e => {
       if (e.target === pre) { try { e.target.mute(); e.target.playVideo(); } catch {} return; }
-      try { player.unMute(); player.setVolume(100); player.playVideo(); } catch {} applyCC(); if (mode !== 'quiz') applyPause(); ensurePlaying(playToken); },
+      try { player.unMute(); player.setVolume(ui.volume); player.playVideo(); } catch {} applyCC(); if (mode !== 'quiz') applyPause(); ensurePlaying(playToken); },
     onStateChange: e => {
       if (e.target === pre) { if (e.data === 1 && !preReady) { preReady = true; try { e.target.pauseVideo(); } catch {} } return; }
       if (e.data === 1 || e.data === 2) { showLoading(false); clearTimeout(loadTimer); }
-      if (e.data === 1) { applyCC(); if (!needSound) $('tapPlay').classList.add('hidden'); if (mode !== 'quiz') setTimeout(preloadNext, 3000); else armQuizTimer(); }
+      if (e.data === 1) { applyCC(); if (!needSound) $('tapPlay').classList.add('hidden'); setTimeout(preloadNext, 1500); if (mode === 'quiz') armQuizTimer(); }
       if (e.data === 0) {
         if (mode === 'quiz') { const r = quiz.round; if (r && r.status !== 'revealed') { try { player.seekTo(r.start, true); player.playVideo(); } catch {} } }
         else if (currentSong) skipSong();
@@ -684,7 +744,7 @@ function makeOrLoad(videoId, start, my) {
       events: ytEvents()
     });
   } else {
-    try { player.loadVideoById({ videoId, startSeconds: start || 0 }); player.unMute(); player.setVolume(100); applyCC(); } catch {}
+    try { player.loadVideoById({ videoId, startSeconds: start || 0 }); player.unMute(); player.setVolume(ui.volume); applyCC(); } catch {}
     ensurePlaying(my);
   }
 }
@@ -725,14 +785,18 @@ function scheduleWindowRefresh(fn) {
 }
 const cid = (() => { try { let v = localStorage.getItem('karaokeCid'); if (!v) { v = Math.random().toString(36).slice(2, 10); localStorage.setItem('karaokeCid', v); } return v; } catch { return Math.random().toString(36).slice(2, 10); } })();
 
-let ui = { showQueue: false, nextPopup: true, autoFill: true }, lastPopupAt = null, endPopupFor = null, popupTimer;
+let ui = { showQueue: false, nextPopup: true, autoFill: true, volume: 100 }, lastPopupAt = null, endPopupFor = null, popupTimer;
 onValue(ref(db, `rooms/${roomId}/ui`), snap => {
   const v = snap.val() || {}, prevAt = lastPopupAt;
   lastPopupAt = v.popupAt || 0;
-  ui = { showQueue: !!v.showQueue, nextPopup: v.nextPopup !== false, autoFill: v.autoFill !== false };
-  if (isMain) { renderQueueScreen(); maybeAdvance(); if (prevAt !== null && lastPopupAt && lastPopupAt !== prevAt) showNextPopup(); }
+  ui = { showQueue: !!v.showQueue, nextPopup: v.nextPopup !== false, autoFill: v.autoFill !== false, volume: v.volume == null ? 100 : Math.max(0, Math.min(100, +v.volume || 0)) };
+  if (isMain) { renderQueueScreen(); applyVolume(); maybeAdvance(); if (prevAt !== null && lastPopupAt && lastPopupAt !== prevAt) showNextPopup(); }
   else renderUiBtns();
 }, dbErr);
+function applyVolume() { try { if (player && player.setVolume) player.setVolume(ui.volume); } catch {} }
+window.volDrag = v => { $('volLabel').textContent = v + '%'; };
+window.volSet = v => guard(update(ref(db, `rooms/${roomId}/ui`), { volume: Math.max(0, Math.min(100, +v)) }));
+window.volBy = d => volSet(ui.volume + d);
 function renderQueueScreen() {      // คิวเพลงบนจอหลัก (เปิดจากแท็บควบคุมบนมือถือ)
   if (!isMain) return;
   const on = ui.showQueue && mode !== 'quiz' && started && !!currentSong && queue.length > 0;
@@ -755,6 +819,7 @@ function renderUiBtns() {
   if (isMain) return;
   $('uiQueueBtn').textContent = ui.showQueue ? 'เปิด' : 'ปิด'; $('uiQueueBtn').dataset.on = ui.showQueue ? '1' : '0';
   $('uiAutoBtn').textContent = ui.autoFill ? 'เปิด' : 'ปิด'; $('uiAutoBtn').dataset.on = ui.autoFill ? '1' : '0';
+  $('volSlider').value = ui.volume; $('volLabel').textContent = ui.volume + '%';
   $('uiPopupBtn').textContent = ui.nextPopup ? 'เปิด' : 'ปิด'; $('uiPopupBtn').dataset.on = ui.nextPopup ? '1' : '0';
 }
 window.toggleUi = k => guard(update(ref(db, `rooms/${roomId}/ui`), { [k]: !ui[k] }));
@@ -774,11 +839,11 @@ onValue(ref(db, `rooms/${roomId}/mode`), snap => {
 onValue(ref(db, `rooms/${roomId}/quiz`), snap => {
   const v = snap.val() || {}, now = Date.now(), prev = quiz;
   quiz = {
-    adminId: v.adminId || null, round: v.round || null, game: v.game || {},
+    adminId: v.adminId || null, round: v.round || null, game: v.game || {}, prep: Object.entries(v.prep || {}).map(([id, p]) => ({ id, ...p })).sort((a, b) => (a.ts || 0) - (b.ts || 0)),
     buzz: Object.entries(v.buzz || {}).map(([id, b]) => ({ id, ...b })).sort((a, b) => (a.seq || 99) - (b.seq || 99) || (a.ts || now) - (b.ts || now)),
     scores: Object.entries(v.scores || {}).map(([id, s]) => ({ id, ...s })).sort((a, b) => b.score - a.score)
   };
-  if (isMain) { quizMainSync(prev); renderQuizMain(); } else renderQuizPhone();
+  if (isMain) { quizMainSync(prev); renderQuizMain(); clearTimeout(preTimer); preTimer = setTimeout(preloadNext, 1500); } else renderQuizPhone();
 }, dbErr);
 
 const qTotal = () => (quiz.game && quiz.game.total != null) ? quiz.game.total : 10;
@@ -873,7 +938,7 @@ async function playQuizRound(r) {
   showLoading(true);
   await loadYT();
   if (my !== playToken) return;
-  makeOrLoad(r.vid, r.start, my);
+  if (pre && preId === r.vid) swapToPre(my, r.start); else { dropPre(); makeOrLoad(r.vid, r.start, my); }
 }
 function quizMainSync(prev) {
   if (mode !== 'quiz') return;
@@ -935,7 +1000,7 @@ const sfxCache = {}, SFX = {};
 const sfxUrl = k => GITHUB_AUDIO_BASE + encodeURIComponent(SFX_FILES[k]);
 Object.keys(SFX_FILES).forEach(k => {
   if (isMain) { const a = new Audio(sfxUrl(k)); a.preload = 'auto'; sfxCache[k] = a; }
-  SFX[k] = () => { const a = sfxCache[k] || (sfxCache[k] = new Audio(sfxUrl(k))); a.currentTime = 0; a.play().catch(() => {}); };
+  SFX[k] = () => { const a = sfxCache[k] || (sfxCache[k] = new Audio(sfxUrl(k))); a.currentTime = 0; a.volume = Math.max(0, Math.min(1, ui.volume / 100)); a.play().catch(() => {}); };
 });
 const SFX_EMOJI = { clap: '👏', horn: '📯', drum: '🥁', whistle: '🎉', buzz: '🔔', correct: '✅', fail: '❌', ding: '🔔' };
 
@@ -987,7 +1052,7 @@ function floatEmoji(emoji) {
 
 /* ======= มือถือ ======= */
 const known = new Map(), addedSet = new Set();
-let chartLoaded = false, lastSearch = [], chartItems = [];
+let chartLoaded = false, chartCat = 'top', lastSearch = [], chartItems = [];
 
 function myName() { try { return $('nameInput').value.trim() || 'ผู้เล่น-' + cid.slice(0, 3); } catch { return 'เพื่อน'; } }
 function updateNow() {
@@ -1002,7 +1067,7 @@ window.tab = n => {
     $('pane-' + t).classList.toggle('hidden', t !== n);
     document.querySelector(`[data-tab="${t}"]`).dataset.on = t === n ? '1' : '0';
   });
-  if (n === 'chart') loadChart();
+  if (n === 'chart' && chartLoaded !== chartCat) loadChart();
 };
 window.shareRoom = async () => {
   try { if (navigator.share) return await navigator.share({ title: 'Party Karaoke', url: phoneLink }); } catch { return; }
@@ -1036,9 +1101,10 @@ function rowHtml(it, extra = '') {
     <div class="flex flex-col gap-1 shrink-0">${addBtn(it.vid)}${extra}</div></div>`;
 }
 const renderSearch = () => $('pane-search').innerHTML = lastSearch.length ? lastSearch.map(i => rowHtml(i)).join('') : '';
-const renderChart = () => $('pane-chart').innerHTML =
-  `<a href="https://charts.youtube.com/charts/TopSongs/${CHART_REGION.toLowerCase()}" target="_blank" rel="noopener" class="block text-center text-xs text-pink-400 py-1">ดูชาร์ตเต็มบน YouTube Charts ↗</a>` +
-  chartItems.map(i => rowHtml(i, `<button onclick="karaokeFor('${i.vid}')" class="px-2 py-1.5 bg-slate-800 rounded-lg text-[11px]">🎤 หาคาราโอเกะ</button>`)).join('');
+const chipsHtml = () => '<div class="flex gap-1.5 overflow-x-auto pb-2 -mx-1 px-1">' + CATS.map(c => `<button onclick="setChartCat('${c.k}')" class="chip !whitespace-nowrap shrink-0 ${c.k === chartCat ? '!bg-pink-600 !text-white' : ''}">${c.label}</button>`).join('') + '</div>';
+const renderChart = () => $('pane-chart').innerHTML = chipsHtml() +
+  (chartCat === 'top' ? `<a href="https://charts.youtube.com/charts/TopSongs/${CHART_REGION.toLowerCase()}" target="_blank" rel="noopener" class="block text-center text-xs text-pink-400 py-1">ดูชาร์ตเต็มบน YouTube Charts ↗</a>` : '') +
+  (chartItems.length ? chartItems.map(i => rowHtml(i, `<button onclick="karaokeFor('${i.vid}')" class="px-2 py-1.5 bg-slate-800 rounded-lg text-[11px]">🎤 หาคาราโอเกะ</button>`)).join('') : '<p class="text-center text-xs text-slate-400 py-8">ไม่พบเพลงในหมวดนี้</p>');
 
 window.doSearch = async () => {
   let q = $('q').value.trim(); if (!q) return;
@@ -1056,16 +1122,13 @@ window.doSearch = async () => {
   } catch (e) { msg(el, ytErr(e)); }
 };
 async function loadChart() {
-  if (chartLoaded) return;
-  const el = $('pane-chart');
+  const el = $('pane-chart'), cat = chartCat;
   if (!YT_API_KEY) { msg(el, ytErr({ code: 'nokey' })); return; }
-  msg(el, 'กำลังโหลดชาร์ต 50 อันดับแรก...');
-  try {
-    const j = await yt('videos', { part: 'snippet', chart: 'mostPopular', videoCategoryId: '10', regionCode: CHART_REGION, maxResults: 50 });
-    chartItems = j.items.map(i => ({ vid: i.id, title: dec(i.snippet.title), channel: dec(i.snippet.channelTitle) }));
-    chartLoaded = true; renderChart();
-  } catch (e) { msg(el, ytErr(e)); }
+  el.innerHTML = chipsHtml() + `<p class="text-center text-xs text-slate-400 py-8">กำลังโหลด${cat === 'top' ? '' : ' (ครั้งแรกอาจใช้เวลาสักครู่)'}...</p>`;
+  try { const items = await fetchCategory(cat); if (cat !== chartCat) return; chartItems = items; chartLoaded = cat; renderChart(); }
+  catch (e) { if (cat === chartCat) el.innerHTML = chipsHtml() + `<p class="text-center text-xs text-slate-400 py-8">${esc(ytErr(e))}</p>`; }
 }
+window.setChartCat = k => { chartCat = k; loadChart(); };
 window.karaokeFor = vid => { const it = known.get(vid); if (!it) return; $('q').value = it.title; $('kar').checked = true; doSearch(); };
 
 function pushSong(vid, title) {
@@ -1170,6 +1233,8 @@ window.setMode = m => {
 
 window.switchQuizSource = type => {
   const isRand = type === 'rand';
+  quizSrcMode = type;
+  if (isRand && quiz.adminId === cid && quiz.prep.length < 1) addRandomPrep(1).catch(() => {});
   $('btnQuizRand').dataset.on = isRand ? '1' : '0';
   $('btnQuizManual').dataset.on = isRand ? '0' : '1';
   $('boxQuizRand').classList.toggle('hidden', !isRand);
@@ -1178,70 +1243,28 @@ window.switchQuizSource = type => {
 
 const manualPick = new Map();
 window.pickManual = id => { const m = manualPick.get(id); if (m) selectManualQuizSong(id, m.title, m.channel, m.dur); };
+const manualRow = id => { const m = manualPick.get(id); return `<div class="flex items-center gap-2 p-2 bg-slate-950 rounded-xl border border-slate-800">
+  <img src="${thumb(id)}" class="w-16 aspect-video object-cover rounded">
+  <div class="min-w-0 flex-1"><p class="text-xs font-medium line-clamp-2">${esc(m.title)}</p><p class="text-[10px] text-slate-400 truncate">${esc(m.channel)}</p></div>
+  <div class="flex flex-col gap-1 shrink-0"><button onclick="prepManual('${id}')" class="px-2.5 py-1 bg-pink-600 rounded-lg text-[11px] font-semibold">+ เตรียมไว้</button><button onclick="pickManual('${id}')" class="px-2.5 py-1 bg-slate-700 rounded-lg text-[11px]">เล่นเลย</button></div></div>`; };
 window.searchManualQuiz = async () => {
-  const q = $('quizManualInput').value.trim();
+  const q = $('quizManualInput').value.trim(), el = $('quizManualResults');
   if (!q) return toast('กรุณาพิมพ์ชื่อเพลงหรือลิงก์');
-  const resBox = $('quizManualResults');
-  const id = videoId(q);
-  if (id) {
-    resBox.innerHTML = '<p class="text-slate-400 text-center py-2">กำลังดึงข้อมูล...</p>';
-    try {
-      const j = await yt('videos', { part: 'snippet,contentDetails', id });
-      if (j.items && j.items[0]) {
-        const item = j.items[0];
-        const title = dec(item.snippet.title);
-        const channel = dec(item.snippet.channelTitle);
-        const dur = isoSec(item.contentDetails.duration);
-        manualPick.set(id, { title, channel, dur });
-        resBox.innerHTML = `<div class="flex items-center gap-2 p-2 bg-slate-950 rounded-xl border border-slate-800">
-          <img src="${thumb(id)}" class="w-16 aspect-video object-cover rounded">
-          <div class="min-w-0 flex-1"><p class="text-xs font-medium truncate">${esc(title)}</p></div>
-          <button onclick="pickManual('${id}')" class="px-3 py-1.5 bg-emerald-600 rounded-lg text-xs font-semibold shrink-0">เลือกเพลงนี้</button>
-        </div>`;
-      } else {
-        resBox.innerHTML = '<p class="text-rose-400 text-center py-2">ไม่พบวิดีโอนี้</p>';
-      }
-    } catch { resBox.innerHTML = '<p class="text-rose-400 text-center py-2">เกิดข้อผิดพลาด</p>'; }
-    return;
-  }
-  resBox.innerHTML = '<p class="text-slate-400 text-center py-2">กำลังค้นหา...</p>';
+  if (!YT_API_KEY) { el.innerHTML = `<p class="text-slate-400 text-center py-2">${esc(ytErr({ code: 'nokey' }))}</p>`; return; }
+  el.innerHTML = '<p class="text-slate-400 text-center py-2">กำลังค้นหา...</p>';
   try {
-    const j = await yt('search', { part: 'snippet', type: 'video', maxResults: 8, videoEmbeddable: 'true', q });
-    const items = j.items || [];
-    if (!items.length) { resBox.innerHTML = '<p class="text-slate-400 text-center py-2">ไม่พบเพลง</p>'; return; }
-    resBox.innerHTML = items.map(i => {
-      const vid = i.id.videoId;
-      const title = dec(i.snippet.title);
-      const channel = dec(i.snippet.channelTitle);
-      return `<div class="flex items-center gap-2 p-2 bg-slate-950 rounded-xl border border-slate-800">
-        <img src="${thumb(vid)}" class="w-16 aspect-video object-cover rounded">
-        <div class="min-w-0 flex-1"><p class="text-xs font-medium line-clamp-1">${esc(title)}</p><p class="text-[10px] text-slate-400 truncate">${esc(channel)}</p></div>
-        <button onclick="fetchAndSelectManual('${vid}')" class="px-3 py-1.5 bg-emerald-600 rounded-lg text-xs font-semibold shrink-0">เลือก</button>
-      </div>`;
-    }).join('');
-  } catch (e) { resBox.innerHTML = `<p class="text-rose-400 text-center py-2">${ytErr(e)}</p>`; }
-};
-
-window.fetchAndSelectManual = async vid => {
-  try {
-    const j = await yt('videos', { part: 'snippet,contentDetails', id: vid });
-    if (j.items && j.items[0]) {
-      const item = j.items[0];
-      const title = dec(item.snippet.title);
-      const channel = dec(item.snippet.channelTitle);
-      const dur = isoSec(item.contentDetails.duration);
-      selectManualQuizSong(vid, title, channel, dur);
-    }
-  } catch { toast('ดึงข้อมูลเพลงไม่สำเร็จ'); }
+    let ids; const lid = videoId(q);
+    if (lid) ids = [lid];
+    else { const j = await yt('search', { part: 'snippet', type: 'video', maxResults: 8, videoEmbeddable: 'true', q }); ids = (j.items || []).map(i => i.id.videoId); }
+    if (!ids.length) { el.innerHTML = '<p class="text-slate-400 text-center py-2">ไม่พบเพลง</p>'; return; }
+    const j2 = await yt('videos', { part: 'snippet,contentDetails', id: ids.join(',') });
+    el.innerHTML = (j2.items || []).map(i => { manualPick.set(i.id, { title: dec(i.snippet.title), channel: dec(i.snippet.channelTitle), dur: isoSec(i.contentDetails.duration) }); return manualRow(i.id); }).join('') || '<p class="text-slate-400 text-center py-2">ไม่พบเพลง</p>';
+  } catch (e) { el.innerHTML = `<p class="text-rose-400 text-center py-2">${esc(ytErr(e))}</p>`; }
 };
 
 window.selectManualQuizSong = (vid, title, channel, dur) => {
   if (quiz.adminId !== cid || quizBlocked()) return;
-  const start = Math.round((dur || 180) * (0.28 + Math.random() * 0.06));
-  guard(update(ref(db, `rooms/${roomId}/quiz`), {
-    round: { vid, title, channel, dur: dur || 180, start, status: 'playing', n: Date.now(), no: ((quiz.round && quiz.round.no) || 0) + 1, limit: qLimit() },
-    buzz: null
-  }));
+  startRound({ vid, title, channel, dur }, null);
   toast('เริ่มเล่นเพลง "' + title + '" แล้ว!');
 };
 
@@ -1260,6 +1283,7 @@ function renderQuizPhone() {
   bb.textContent = mine >= 0 ? `คุณกดเป็นลำดับที่ ${mine + 1}` : !open ? (quiz.buzz.length >= 2 ? 'ครบ 2 คนแล้ว' : 'หมดเวลากด') : '🔔 BUZZ!';
   scheduleWindowRefresh(renderQuizPhone);
   renderQuizTimerPhone();
+  renderPrepList();
   document.querySelectorAll('[data-cfg]').forEach(b => b.dataset.on = String(b.dataset.cfg === 'total' ? qTotal() : qLimit()) === b.dataset.val ? '1' : '0');
   $('qSecret').textContent = r ? `คำตอบ: ${r.title} — ${r.channel || ''} (เริ่มที่ ${fmt(r.start)} จาก ${fmt(r.dur)})` : 'เลือกสุ่มเพลงจากชาร์ต หรือค้นหาเพลงเองด้านล่าง';
   $('qBuzz').innerHTML = quiz.buzz.length ? quiz.buzz.map((b, i) => `<div class="flex items-center gap-2 p-2 rounded-xl bg-slate-900 border ${i === 0 ? 'border-amber-400/60' : 'border-slate-800'}">
@@ -1296,21 +1320,57 @@ function quizBlocked() {
   if (tot > 0 && quiz.round && (quiz.round.no || 1) >= tot) { toast('ครบ ' + tot + ' ข้อแล้ว กด "จบเกม / สรุปผล"'); return true; }
   return false;
 }
+let quizSrcMode = 'rand', quizCat = 'top';
+const prepRef = () => ref(db, `rooms/${roomId}/quiz/prep`);
+async function randomQuizItem(exclude = []) {
+  const pool = await getCategoryPool(quizCat);
+  const taken = new Set([...quiz.prep.map(p => p.vid), ...exclude, ...(quiz.round ? [quiz.round.vid] : [])]);
+  let left = pool.filter(x => !qUsed.has(x.vid) && !taken.has(x.vid));
+  if (!left.length) { qUsed.clear(); left = pool.filter(x => !taken.has(x.vid)); }
+  if (!left.length) return null;
+  const p = left[Math.floor(Math.random() * left.length)]; qUsed.add(p.vid);
+  return { vid: p.vid, title: p.title, channel: p.channel, dur: p.dur };
+}
+async function addRandomPrep(n) {
+  const upd = {}, ex = [];
+  for (let i = 0; i < n; i++) { const it = await randomQuizItem(ex); if (!it) break; ex.push(it.vid); upd[push(prepRef()).key] = { ...it, ts: Date.now() + i }; }
+  const c = Object.keys(upd).length; if (c) guard(update(prepRef(), upd));
+  return c;
+}
+function startRound(p, prepId) {
+  const start = Math.round((p.dur || 180) * (0.28 + Math.random() * 0.06));      // ประมาณช่วงก่อนฮุก
+  const upd = { round: { vid: p.vid, title: p.title, channel: p.channel || '', dur: p.dur || 180, start, status: 'playing', n: Date.now(), no: ((quiz.round && quiz.round.no) || 0) + 1, limit: qLimit() }, buzz: null };
+  if (prepId) upd['prep/' + prepId] = null;
+  guard(update(ref(db, `rooms/${roomId}/quiz`), upd));
+  if (quizSrcMode === 'rand' && quiz.prep.length - (prepId ? 1 : 0) < 1) addRandomPrep(1).catch(() => {});      // เตรียมข้อถัดไปไว้ให้จอหลักโหลดรอ
+}
 window.quizNext = async () => {
   if (quiz.adminId !== cid || quizBlocked()) return;
-  try {
-    if (!qPool.length) {
-      toast('กำลังสุ่มเพลงจากชาร์ต...');
-      const j = await yt('videos', { part: 'snippet,contentDetails,status', chart: 'mostPopular', videoCategoryId: '10', regionCode: CHART_REGION, maxResults: 50 });
-      qPool = j.items.filter(i => i.status && i.status.embeddable).map(i => ({ vid: i.id, title: dec(i.snippet.title), channel: dec(i.snippet.channelTitle), dur: isoSec(i.contentDetails.duration) })).filter(x => x.dur >= 100 && x.dur <= 480);
-    }
-  } catch (e) { return toast(ytErr(e)); }
-  if (!qPool.length) return toast('ไม่พบเพลงในชาร์ต');
-  let left = qPool.filter(x => !qUsed.has(x.vid)); if (!left.length) { qUsed.clear(); left = qPool; }
-  const p = left[Math.floor(Math.random() * left.length)]; qUsed.add(p.vid);
-  const start = Math.round(p.dur * (0.28 + Math.random() * 0.06));
-  guard(update(ref(db, `rooms/${roomId}/quiz`), { round: { ...p, start, status: 'playing', n: Date.now(), no: ((quiz.round && quiz.round.no) || 0) + 1, limit: qLimit() }, buzz: null }));
+  let item = quiz.prep[0];
+  if (!item) {
+    if (quizSrcMode === 'manual') return toast('ยังไม่มีข้อที่เตรียมไว้ ค้นหาแล้วกด "+ เตรียมไว้" ก่อน');
+    toast('กำลังสุ่มเพลง...');
+    try { item = await randomQuizItem(); } catch (e) { return toast(ytErr(e)); }
+    if (!item) return toast('ไม่พบเพลงในแหล่งนี้');
+  }
+  startRound(item, item.id);
 };
+window.prepManual = id => { const m = manualPick.get(id); if (!m) return; guard(push(prepRef(), { vid: id, title: m.title, channel: m.channel, dur: m.dur, ts: Date.now() })); toast(`เพิ่มเป็นข้อที่ ${quiz.prep.length + 1} แล้ว`); };
+window.prepRemove = id => guard(remove(ref(db, `rooms/${roomId}/quiz/prep/${id}`)));
+window.prepUp = id => { const f = quiz.prep[0]; if (f && f.id !== id) guard(set(ref(db, `rooms/${roomId}/quiz/prep/${id}/ts`), (f.ts || Date.now()) - 1)); };
+window.prepFillRandom = async () => {
+  if (quiz.adminId !== cid) return;
+  toast('กำลังสุ่ม 5 ข้อ...');
+  try { const n = await addRandomPrep(5); toast(n ? `เพิ่มข้อสุ่ม ${n} ข้อแล้ว` : 'ไม่พบเพลงในแหล่งนี้'); } catch (e) { toast(ytErr(e)); }
+};
+window.setQuizCat = k => { quizCat = k; };
+function fillQuizCats() { const sel = $('quizCatSel'); if (sel) sel.innerHTML = CATS.map(c => `<option value="${c.k}">${c.label}</option>`).join(''); }
+fillQuizCats();
+function renderPrepList() {
+  const el = $('quizPrepList'); if (!el) return;
+  $('prepCount').textContent = quiz.prep.length;
+  el.innerHTML = quiz.prep.length ? quiz.prep.map((p, i) => `<div class="flex items-center gap-2 p-2 rounded-xl bg-slate-950 border border-slate-800"><span class="w-5 text-center text-xs font-bold text-slate-500">${i + 1}</span><img src="${thumb(p.vid)}" class="w-14 aspect-video object-cover rounded"><p class="flex-1 min-w-0 text-xs line-clamp-2">${esc(p.title)}</p><div class="flex flex-col gap-1">${i > 0 ? `<button onclick="prepUp('${esc(p.id)}')" class="px-2 py-0.5 bg-slate-800 rounded text-[10px]">ขึ้นก่อน</button>` : ''}<button onclick="prepRemove('${esc(p.id)}')" class="px-2 py-0.5 bg-slate-800 text-red-400 rounded text-[10px]">ลบ</button></div></div>`).join('') : '<p class="text-xs text-slate-500 text-center py-2">ยังไม่มีข้อที่เตรียมไว้</p>';
+}
 window.setQuizCfg = (k, v) => { if (quiz.adminId === cid) guard(update(ref(db, `rooms/${roomId}/quiz/game`), { [k]: v })); };
 window.quizFinish = () => { if (quiz.adminId === cid) guard(update(ref(db, `rooms/${roomId}/quiz/game`), { over: true })); };
 window.quizNewGame = () => { if (quiz.adminId !== cid || !confirm('เริ่มเกมใหม่? ข้อและคะแนนทั้งหมดจะถูกล้าง')) return; guard(update(ref(db, `rooms/${roomId}/quiz`), { round: null, buzz: null, scores: null, 'game/over': false })); };
