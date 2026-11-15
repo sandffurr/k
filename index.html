@@ -8,6 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
+.sym{font-family:'Segoe UI Symbol','Noto Sans Symbols 2','Noto Sans Symbols','Apple Symbols',sans-serif}
 html,body{font-family:'Prompt',sans-serif;touch-action:manipulation;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
 input,select,textarea{font-size:16px!important}
 iframe{border:0}
@@ -67,7 +68,7 @@ button:disabled{opacity:.45}
       <p id="roomCode" class="pill px-4 py-1.5 text-sm text-slate-300"></p>
       <p id="idleHint" class="text-pink-300 text-sm min-h-[1.25rem]"></p>
       <a href="https://www.youtube.com/" target="_blank" rel="noopener" class="text-xs text-slate-500 hover:text-slate-300 underline">มี YouTube Premium? ล็อกอินในเบราว์เซอร์นี้ก่อนเพื่อดูแบบไม่มีโฆษณา ↗</a>
-      <button id="startBtn" onclick="userStart()" class="grad px-10 py-4 rounded-full text-lg font-bold shadow-[0_12px_40px_rgba(255,79,139,.4)]">▶ แตะเพื่อเริ่ม (เต็มจอ)</button>
+      <button id="startBtn" onclick="userStart()" class="grad px-10 py-4 rounded-full text-lg font-bold shadow-[0_12px_40px_rgba(255,79,139,.4)]">▶︎ แตะเพื่อเริ่ม (เต็มจอ)</button>
     </div>
   </div>
 
@@ -96,6 +97,9 @@ button:disabled{opacity:.45}
     <p class="text-emerald-400 text-xs md:text-sm font-semibold tracking-widest">✅ เฉลย</p>
     <h2 id="qbTitle" class="text-white font-extrabold text-2xl md:text-4xl leading-tight"></h2>
     <p id="qbSub" class="text-slate-300 text-base md:text-xl mt-0.5"></p>
+  </div>
+  <div id="loadingPill" class="hidden absolute top-6 left-1/2 -translate-x-1/2 z-[28] glass rounded-full px-6 py-3 flex items-center gap-3 text-white text-base md:text-xl">
+    <span class="w-5 h-5 md:w-6 md:h-6 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>กำลังโหลดเพลง…
   </div>
   <button id="fsBtn" onclick="goFullscreen()" class="hidden absolute bottom-4 right-4 z-40 glass px-4 py-2 text-white rounded-full text-sm">⛶ เต็มจอ</button>
   <button id="tapPlay" onclick="userStart()" class="hidden absolute inset-0 m-auto w-fit h-fit grad px-8 py-4 rounded-full text-xl font-bold shadow-2xl z-40">🔊 แตะเพื่อเปิดเสียง / เล่นต่อ</button>
@@ -146,7 +150,7 @@ button:disabled{opacity:.45}
         <div class="grid grid-cols-5 gap-1.5">
           <button onclick="seekBy(-30)" class="chip">−30</button>
           <button onclick="seekBy(-10)" class="chip">−10</button>
-          <button onclick="restartSong()" class="chip">⏮</button>
+          <button onclick="restartSong()" class="chip">เริ่มใหม่</button>
           <button onclick="seekBy(10)" class="chip">+10</button>
           <button onclick="seekBy(30)" class="chip">+30</button>
         </div>
@@ -158,7 +162,7 @@ button:disabled{opacity:.45}
           <button onclick="sfx('horn')" class="chip !px-0"><span class="text-2xl block">📯</span>แตร</button>
           <button onclick="sfx('drum')" class="chip !px-0"><span class="text-2xl block">🥁</span>กลองรัว</button>
           <button onclick="sfx('whistle')" class="chip !px-0"><span class="text-2xl block">🎉</span>ฮิ้ว</button>
-          <button onclick="sfx('buzz')" class="chip !px-0"><span class="text-2xl block">🔔</span>ติ๊ง</button>
+          <button onclick="sfx('buzz')" class="chip !px-0"><span class="text-2xl block">📢</span>บัซเซอร์</button>
         </div>
         <div class="flex justify-between pt-1 border-t border-white/5">
           <button onclick="sendReaction('🔥')" class="flex-1 text-3xl py-2 active:scale-125 transition">🔥</button>
@@ -216,8 +220,8 @@ button:disabled{opacity:.45}
         <div class="space-y-2.5">
           <p class="label">ควบคุมเพลง</p>
           <div class="flex justify-between">
-            <button onclick="sendCmd('pause')" class="ibtn">⏸</button>
-            <button onclick="sendCmd('play')" class="ibtn">▶</button>
+            <button onclick="sendCmd('pause')" class="ibtn sym">⏸︎</button>
+            <button onclick="sendCmd('play')" class="ibtn sym">▶︎</button>
             <button onclick="sendCmd('seekBy',-10)" class="ibtn !text-xs">−10</button>
             <button onclick="sendCmd('seekBy',10)" class="ibtn !text-xs">+10</button>
             <button onclick="sendCmd('qreplay')" class="ibtn">🔁</button>
@@ -248,8 +252,8 @@ button:disabled{opacity:.45}
       <img id="npThumb" class="hidden w-12 h-12 rounded-2xl object-cover bg-slate-800" alt="">
       <div id="npIcon" class="w-12 h-12 rounded-2xl grad grid place-items-center text-xl">🎵</div>
       <div class="min-w-0 flex-1"><p class="text-[10px] text-pink-400 font-semibold tracking-wider">กำลังเล่นบนจอ</p><p id="npTitle" class="text-sm font-semibold truncate">ยังไม่มีเพลง</p><p id="npBy" class="text-[11px] text-pink-300 truncate"></p></div>
-      <button id="pauseBtn" onclick="togglePause()" class="w-11 h-11 rounded-full bg-white text-slate-950 text-lg grid place-items-center">⏸</button>
-      <button onclick="skipSong()" class="ibtn">⏭</button>
+      <button id="pauseBtn" onclick="togglePause()" class="sym w-11 h-11 rounded-full bg-white text-slate-950 text-lg grid place-items-center">⏸︎</button>
+      <button onclick="skipSong()" class="ibtn sym">⏭︎</button>
     </div>
     <nav class="grid grid-cols-5 bg-slate-950/90 backdrop-blur-xl border-t border-white/5">
       <button class="nav-btn" data-tab="search" onclick="tab('search')"><span>🔍</span><span>ค้นหา</span></button>
@@ -470,25 +474,28 @@ function applyCC() {
 function applyPause() {
   try { if (!player || !player.getPlayerState) return; if (paused) player.pauseVideo(); else if (player.getPlayerState() === 2) player.playVideo(); } catch {}
 }
-let needSound = false;
-function ensurePlaying(my) {      // เคยแตะเริ่มแล้ว = ลองเล่นซ้ำเงียบ ๆ ก่อน ถ้ายังไม่เล่นจริง ๆ ค่อยเล่นแบบปิดเสียงแล้วขึ้นปุ่มให้แตะ
-  const tryPlay = stage => {
+let needSound = false, loadTimer;
+const showLoading = on => $('loadingPill').classList.toggle('hidden', !on);
+function ensurePlaying(my) {      // รอให้เพลงโหลดเอง 10 วินาที (ไม่สั่งเล่นซ้ำ) ถ้าไม่ขึ้นจริง ๆ ค่อยแสดงปุ่มให้แตะ
+  showLoading(true); clearTimeout(loadTimer);
+  let extra = 0;
+  const check = () => {
     if (my !== playToken || !player) return;
     try {
       const st = player.getPlayerState();
-      if (st === 1 || st === 3) return;
-      if (mode !== 'quiz' && paused) return;
-      if (mode === 'quiz' && quiz.buzz.length) return;           // หยุดเพราะมีคนกด BUZZ ไม่ใช่เล่นไม่ได้
-      if (stage < 2 && started) { player.playVideo(); setTimeout(() => tryPlay(stage + 1), 3500); return; }
-      needSound = true; player.mute(); player.playVideo(); $('tapPlay').classList.remove('hidden');
+      if (st === 1 || st === 2 || !started) return showLoading(false);
+      if (st === 3 && extra++ < 3) { loadTimer = setTimeout(check, 5000); return; }      // ยังบัฟเฟอร์อยู่ (เน็ตช้า) รออีก ไม่เกิน 15 วินาที
+      if (mode === 'quiz' ? quiz.buzz.length : paused) return showLoading(false);
+      needSound = true; showLoading(false); player.mute(); player.playVideo(); $('tapPlay').classList.remove('hidden');
     } catch {}
   };
-  setTimeout(() => tryPlay(0), started ? 3000 : 1500);      // 3 + 3.5 + 3.5 = ราว 10 วินาที
+  loadTimer = setTimeout(check, 10000);
 }
 function ytEvents() {
   return {
     onReady: () => { try { player.playVideo(); } catch {} applyCC(); if (mode !== 'quiz') applyPause(); ensurePlaying(playToken); },
     onStateChange: e => {
+      if (e.data === 1 || e.data === 2) { showLoading(false); clearTimeout(loadTimer); }
       if (e.data === 1) { applyCC(); if (!needSound) $('tapPlay').classList.add('hidden'); }
       if (e.data === 0) {
         if (mode === 'quiz') { const r = quiz.round; if (r && r.status !== 'revealed') { try { player.seekTo(r.start, true); player.playVideo(); } catch {} } }
@@ -496,6 +503,7 @@ function ytEvents() {
       }
     },
     onError: () => {
+      showLoading(false);
       if (mode === 'quiz') return toast('เพลงนี้เล่นไม่ได้ ให้แอดมินสุ่มเพลงใหม่');
       const tk = playToken; toast('เพลงนี้เล่นไม่ได้ ข้ามไปเพลงถัดไป');
       setTimeout(() => tk === playToken && skipSong(), 2000);
@@ -528,15 +536,27 @@ async function showSong(song) {
   if (!song) {
     $('titleBar').classList.replace('opacity-100', 'opacity-0');
     if (player && player.stopVideo) { try { player.stopVideo(); } catch {} }
+    showLoading(false);
     return;
   }
   const id = videoId(song.url);
   if (!id) { toast('ลิงก์เพลงไม่ถูกต้อง ข้ามไปเพลงถัดไป'); setTimeout(() => my === playToken && skipSong(), 1500); return; }
   flashTitle(song);
+  showLoading(true);
   guard(set(ref(db, `rooms/${roomId}/history/${id}`), { title: song.title, vid: id, by: song.addedBy || '', ts: Date.now() }));
   await loadYT();
   if (my !== playToken) return;
   makeOrLoad(id, 0, my);
+}
+let srvOff = 0;
+onValue(ref(db, '.info/serverTimeOffset'), snap => { srvOff = snap.val() || 0; });
+const BUZZ_WINDOW = 2000;
+const srvNow = () => Date.now() + srvOff;
+const buzzWindowOpen = () => quiz.buzz.length === 0 || (quiz.buzz.length === 1 && (!quiz.buzz[0].at || srvNow() - quiz.buzz[0].at <= BUZZ_WINDOW));
+let winTimer;
+function scheduleWindowRefresh(fn) {
+  clearTimeout(winTimer);
+  if (quiz.buzz.length === 1 && quiz.buzz[0].at) { const left = BUZZ_WINDOW - (srvNow() - quiz.buzz[0].at); if (left > 0) winTimer = setTimeout(fn, left + 80); }
 }
 const cid = (() => { try { let v = localStorage.getItem('karaokeCid'); if (!v) { v = Math.random().toString(36).slice(2, 10); localStorage.setItem('karaokeCid', v); } return v; } catch { return Math.random().toString(36).slice(2, 10); } })();
 
@@ -562,7 +582,7 @@ onValue(ref(db, `rooms/${roomId}/quiz`), snap => {
   if (isMain) { quizMainSync(prev); renderQuizMain(); } else renderQuizPhone();
 }, dbErr);
 
-function killPlayer() { playToken++; if (player && player.stopVideo) { try { player.stopVideo(); } catch {} } $('tapPlay').classList.add('hidden'); }
+function killPlayer() { playToken++; showLoading(false); clearTimeout(loadTimer); if (player && player.stopVideo) { try { player.stopVideo(); } catch {} } $('tapPlay').classList.add('hidden'); }
 function applyMode() {
   if (!isMain) return;
   killPlayer();
@@ -573,6 +593,7 @@ function applyMode() {
 async function playQuizRound(r) {
   const my = ++playToken;
   $('tapPlay').classList.add('hidden');
+  showLoading(true);
   await loadYT();
   if (my !== playToken) return;
   makeOrLoad(r.vid, r.start, my);
@@ -614,17 +635,18 @@ function renderQuizMain() {
   }
   $('hudBuzz').innerHTML = [0, 1].map(i => {
     const b = quiz.buzz[i];
-    if (!b) return `<div class="rounded-3xl border-2 border-dashed border-white/20 px-6 py-4 min-w-[12rem] md:min-w-[17rem] text-slate-400"><p class="text-xs md:text-base font-semibold tracking-widest">คนที่ ${i + 1}</p><p class="text-2xl md:text-4xl font-bold mt-1">รอคนกด…</p></div>`;
+    if (!b) return `<div class="rounded-3xl border-2 border-dashed border-white/20 px-6 py-4 min-w-[12rem] md:min-w-[17rem] text-slate-400"><p class="text-xs md:text-base font-semibold tracking-widest">คนที่ ${i + 1}</p><p class="text-2xl md:text-4xl font-bold mt-1">${i === 1 && quiz.buzz.length === 1 && !buzzWindowOpen() ? 'ปิดรับแล้ว' : 'รอคนกด…'}</p></div>`;
     const tone = b.judged === '+' ? 'ring-emerald-400 bg-emerald-500/25' : b.judged === '-' ? 'ring-rose-400 bg-rose-500/25' : i === 0 ? 'ring-amber-300 bg-amber-400/20 animate-pulse' : 'ring-sky-300 bg-sky-400/15';
     const mark = b.judged === '+' ? '✅' : b.judged === '-' ? '❌' : '🔔';
     return `<div class="glass rounded-3xl ring-4 ${tone} px-6 py-4 min-w-[12rem] md:min-w-[17rem]"><p class="text-xs md:text-base font-semibold tracking-widest text-white/80">${mark} คนที่ ${i + 1}</p><p class="text-3xl md:text-6xl font-extrabold text-white mt-1 truncate max-w-[16rem] md:max-w-[22rem]">${esc(b.name)}</p></div>`;
   }).join('');
+  scheduleWindowRefresh(renderQuizMain);
   $('hudScores').innerHTML = quiz.scores.length ? quiz.scores.slice(0, 8).map((p, i) => `<div class="flex items-center justify-between gap-3 rounded-2xl px-4 py-2 ${i === 0 ? 'bg-amber-400/15' : 'bg-white/5'}"><span class="truncate text-xl md:text-3xl font-bold text-white">${['🥇', '🥈', '🥉'][i] || `<span class="inline-block w-8 text-slate-500">${i + 1}</span>`} ${esc(p.name)}</span><span class="text-3xl md:text-5xl font-black text-amber-300 tabular-nums">${p.score}</span></div>`).join('') : '<p class="text-lg md:text-2xl text-slate-500 py-4 text-center">ยังไม่มีคะแนน</p>';
 }
 
 /* ======= เสียงเอฟเฟกต์ ======= */
 const GITHUB_AUDIO_BASE = 'https://raw.githubusercontent.com/sandffurr/karaokeparty/main/';
-const SFX_FILES = { clap: 'Crowd Cheering.mp3', horn: 'Horn.mp3', drum: 'Drum.mp3', whistle: 'Wolf Whistle.mp3', buzz: 'Button.mp3', correct: 'Correct.mp3', fail: 'Fail.mp3', ding: 'Button.mp3' };
+const SFX_FILES = { clap: 'Crowd Cheering.mp3', horn: 'Horn.mp3', drum: 'Drum.mp3', whistle: 'Wolf Whistle.mp3', buzz: 'Buzzer.mp3', correct: 'Correct.mp3', fail: 'Fail.mp3', ding: 'Buzzer.mp3' };
 const sfxCache = {}, SFX = {};
 const sfxUrl = k => GITHUB_AUDIO_BASE + encodeURIComponent(SFX_FILES[k]);
 Object.keys(SFX_FILES).forEach(k => {
@@ -682,7 +704,7 @@ let chartLoaded = false, lastSearch = [], chartItems = [];
 function myName() { try { return $('nameInput').value.trim() || 'ผู้เล่น-' + cid.slice(0, 3); } catch { return 'เพื่อน'; } }
 function updateNow() {
   $('npTitle').textContent = currentSong ? currentSong.title : 'ยังไม่มีเพลง';
-  $('pauseBtn').textContent = paused ? '▶' : '⏸';
+  $('pauseBtn').textContent = paused ? '▶\uFE0E' : '⏸\uFE0E';
   $('npBy').textContent = currentSong && currentSong.addedBy ? '👤 ' + currentSong.addedBy : '';
   const vid = currentSong && videoId(currentSong.url);
   $('npThumb').src = vid ? thumb(vid) : ''; $('npThumb').classList.toggle('hidden', !vid); $('npIcon').classList.toggle('hidden', !!vid);
@@ -912,13 +934,15 @@ function renderQuizPhone() {
   $('qAdmin').classList.toggle('hidden', !isAdmin);
   $('qPlayer').classList.toggle('hidden', isAdmin);
   $('qStatus').textContent = !r ? '⏳ รอแอดมินเลือก/สุ่มเพลง...' : rev ? `✅ เฉลย: ${r.title}` : quiz.buzz.length ? `🔔 ${quiz.buzz[0].name} กดก่อน!` : `🎵 ข้อที่ ${r.no || 1} กำลังเล่น ใครรู้กด BUZZ!`;
-  const bb = $('buzzBtn'); bb.disabled = !r || rev || mine >= 0 || quiz.buzz.length >= 2;
-  bb.textContent = mine >= 0 ? `คุณกดเป็นลำดับที่ ${mine + 1}` : quiz.buzz.length >= 2 ? 'ครบ 2 คนแล้ว' : '🔔 BUZZ!';
+  const open = buzzWindowOpen();
+  const bb = $('buzzBtn'); bb.disabled = !r || rev || mine >= 0 || !open;
+  bb.textContent = mine >= 0 ? `คุณกดเป็นลำดับที่ ${mine + 1}` : !open ? (quiz.buzz.length >= 2 ? 'ครบ 2 คนแล้ว' : 'หมดเวลากด') : '🔔 BUZZ!';
+  scheduleWindowRefresh(renderQuizPhone);
   $('qSecret').textContent = r ? `คำตอบ: ${r.title} — ${r.channel || ''} (เริ่มที่ ${fmt(r.start)} จาก ${fmt(r.dur)})` : 'เลือกสุ่มเพลงจากชาร์ต หรือค้นหาเพลงเองด้านล่าง';
   $('qBuzz').innerHTML = quiz.buzz.length ? quiz.buzz.map((b, i) => `<div class="flex items-center gap-2 p-2 rounded-xl bg-slate-900 border ${i === 0 ? 'border-amber-400/60' : 'border-slate-800'}">
     <span class="w-5 text-xs text-slate-500">${i + 1}</span><span class="flex-1 text-sm truncate">${esc(b.name)}</span>
-    ${b.judged ? (b.judged === '+' ? '<span class="text-xs">✅ +1</span>' : '<span class="text-xs">❌ −1</span>')
-      : (isAdmin ? `<button onclick="quizJudge('${esc(b.id)}',1)" class="px-2.5 py-1 bg-emerald-600 rounded-lg text-xs">✓ +1</button><button onclick="quizJudge('${esc(b.id)}',-1)" class="px-2.5 py-1 bg-rose-600 rounded-lg text-xs">✕ −1</button>` : '')}</div>`).join('')
+    ${b.judged ? (b.judged === '+' ? '<span class="text-xs">✅ +1</span>' : '<span class="text-xs">❌ ผิด</span>')
+      : (isAdmin ? `<button onclick="quizJudge('${esc(b.id)}',1)" class="px-2.5 py-1 bg-emerald-600 rounded-lg text-xs">✓ +1</button><button onclick="quizJudge('${esc(b.id)}',-1)" class="px-2.5 py-1 bg-rose-600 rounded-lg text-xs">✕ ผิด</button>` : '')}</div>`).join('')
     : '<p class="text-xs text-slate-600">ยังไม่มีคนกด</p>';
   $('qScores').innerHTML = quiz.scores.length ? quiz.scores.map((p, i) => `<div class="flex justify-between p-2 rounded-xl bg-slate-900 border border-slate-800 text-sm"><span class="text-base">${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${esc(p.name)}</span><span class="font-black text-xl text-amber-300">${p.score}</span></div>`).join('')
     : '<p class="text-xs text-slate-600">ยังไม่มีคะแนน</p>';
@@ -926,16 +950,18 @@ function renderQuizPhone() {
 
 window.buzz = () => {
   const r = quiz.round;
-  if (!r || r.status === 'revealed' || quiz.buzz.length >= 2 || quiz.buzz.some(b => b.id === cid)) return;
+  if (!r || r.status === 'revealed' || !buzzWindowOpen() || quiz.buzz.some(b => b.id === cid)) return;
   const typedName = ($('qNameInput').value.trim() || $('nameInput').value.trim());
   if (!typedName) { $('qNameInput').focus(); return toast('กรุณาใส่ชื่อของคุณก่อนกดปุ่ม BUZZ!'); }
   try { navigator.vibrate && navigator.vibrate(60); } catch {}
   runTransaction(ref(db, `rooms/${roomId}/quiz/buzz`), cur => {      // ให้เซิร์ฟเวอร์ตัดสิน: รับแค่ 2 คนแรก และกำหนดลำดับให้
     cur = cur || {};
-    if (cur[cid] || Object.keys(cur).length >= 2) return;
-    cur[cid] = { name: typedName, seq: Object.keys(cur).length + 1 };
+    const keys = Object.keys(cur), t = srvNow();
+    if (cur[cid] || keys.length >= 2) return;
+    if (keys.length === 1 && cur[keys[0]].at && t - cur[keys[0]].at > BUZZ_WINDOW + 400) return;      // เกิน 2 วินาทีหลังคนแรก (เผื่อเน็ตหน่วงนิดหน่อย)
+    cur[cid] = { name: typedName, seq: keys.length + 1, at: t };
     return cur;
-  }).then(res => { if (!res.committed) toast('ช้าไปนิด มีคนกด BUZZ ครบ 2 คนแล้ว'); })
+  }).then(res => { if (!res.committed) toast('ช้าไปนิด ปิดรับการกดแล้ว'); })
     .catch(e => toast('กดไม่สำเร็จ: ' + (e.code || e.message)));
 };
 
@@ -963,14 +989,14 @@ window.quizJudge = (pid, d) => {
   if (quiz.adminId !== cid) return;
   const b = quiz.buzz.find(x => x.id === pid); if (!b || b.judged) return;
   guard(update(ref(db, `rooms/${roomId}/quiz/buzz/${pid}`), { judged: d > 0 ? '+' : '-' }));
-  guard(runTransaction(ref(db, `rooms/${roomId}/quiz/scores/${pid}`), cur => ({ name: b.name, score: ((cur && cur.score) || 0) + d })));
+  if (d > 0) guard(runTransaction(ref(db, `rooms/${roomId}/quiz/scores/${pid}`), cur => ({ name: b.name, score: ((cur && cur.score) || 0) + d })));
   if (d > 0) { quizReveal(); sfx('correct'); }
   else {
     sfx('fail');
-    if (quiz.buzz.length >= 2 && quiz.buzz.every(x => x.id === pid || x.judged === '-')) {
-      toast('ผิดทั้งสองคน กำลังเล่นเพลงต่อ...');
+    if ((quiz.buzz.length >= 2 || !buzzWindowOpen()) && quiz.buzz.every(x => x.id === pid || x.judged === '-')) {
+      toast('ตอบผิด กำลังเล่นเพลงต่อ...');
       setTimeout(() => {        // รอเสียงผิดจบ แล้วล้างคิว BUZZ ให้จอหลักเล่นต่อและทุกคนกดได้ใหม่
-        if (quiz.buzz.length >= 2 && quiz.buzz.every(x => x.judged === '-')) guard(set(ref(db, `rooms/${roomId}/quiz/buzz`), null));
+        if (quiz.buzz.length && quiz.buzz.every(x => x.judged === '-')) guard(set(ref(db, `rooms/${roomId}/quiz/buzz`), null));
       }, 2500);
     }
   }
