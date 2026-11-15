@@ -71,7 +71,7 @@ button:disabled{opacity:.45}
     </div>
   </div>
 
-  <div id="quizCover" class="hidden absolute inset-0 z-[15] bg-slate-950 flex flex-col items-center justify-center text-center p-6 md:p-8 overflow-hidden">
+  <div id="quizCover" class="hidden absolute inset-0 z-[15] bg-slate-950 flex flex-col items-center justify-center text-center pt-36 md:pt-48 pb-6 pl-6 pr-[20rem] md:pr-[27rem] overflow-hidden">
     <div class="blob w-[38rem] h-[38rem] bg-violet-600 -top-40 -right-40"></div>
     <div class="blob w-[32rem] h-[32rem] bg-pink-500 -bottom-40 -left-32" style="animation-delay:-8s"></div>
     <div class="relative flex flex-col items-center">
@@ -85,16 +85,19 @@ button:disabled{opacity:.45}
       </div>
     </div>
   </div>
-  <div id="quizHud" class="hidden absolute top-4 left-4 z-[25] w-56 md:w-72 space-y-3">
-    <div class="glass rounded-2xl p-3"><p class="text-[11px] text-amber-300 font-semibold tracking-wide mb-1.5">⚡ ลำดับการกด</p><div id="hudBuzz" class="space-y-1 text-sm md:text-base"></div></div>
-    <div class="glass rounded-2xl p-3"><p class="text-[11px] text-amber-300 font-semibold tracking-wide mb-1.5">🏆 คะแนน</p><div id="hudScores" class="space-y-1 text-sm md:text-base"></div></div>
+  <div id="quizHud" class="hidden absolute inset-0 z-[25] pointer-events-none">
+    <div id="hudBuzz" class="absolute top-6 left-6 md:top-8 md:left-8 flex gap-3 md:gap-5"></div>
+    <div class="absolute top-6 right-6 md:top-8 md:right-8 w-[19rem] md:w-[26rem] glass rounded-3xl p-4 md:p-6" style="max-height:calc(100% - 3rem);overflow:hidden">
+      <p class="text-sm md:text-xl font-bold text-amber-300 tracking-wide mb-3">🏆 ตารางคะแนน</p>
+      <div id="hudScores" class="space-y-2"></div>
+    </div>
   </div>
-  <div id="quizBanner" class="hidden absolute left-6 bottom-6 md:left-10 md:bottom-10 z-[25] max-w-[80%] glass rounded-3xl px-6 py-4">
+  <div id="quizBanner" class="hidden absolute left-6 bottom-6 md:left-10 md:bottom-10 z-[25] glass rounded-3xl px-6 py-4" style="max-width:calc(100% - 22rem)">
     <p class="text-emerald-400 text-xs md:text-sm font-semibold tracking-widest">✅ เฉลย</p>
     <h2 id="qbTitle" class="text-white font-extrabold text-2xl md:text-4xl leading-tight"></h2>
     <p id="qbSub" class="text-slate-300 text-base md:text-xl mt-0.5"></p>
   </div>
-  <button id="fsBtn" onclick="goFullscreen()" class="hidden absolute top-4 right-4 z-40 glass px-4 py-2 text-white rounded-full text-sm">⛶ เต็มจอ</button>
+  <button id="fsBtn" onclick="goFullscreen()" class="hidden absolute bottom-4 right-4 z-40 glass px-4 py-2 text-white rounded-full text-sm">⛶ เต็มจอ</button>
   <button id="tapPlay" onclick="userStart()" class="hidden absolute inset-0 m-auto w-fit h-fit grad px-8 py-4 rounded-full text-xl font-bold shadow-2xl z-40">🔊 แตะเพื่อเปิดเสียง / เล่นต่อ</button>
 </div>
 
@@ -120,6 +123,7 @@ button:disabled{opacity:.45}
   </header>
 
   <main class="px-4 py-4 pb-44">
+    <div class="k-only">
     <div id="pane-search" class="space-y-2"><p class="text-center text-sm text-slate-500 py-16">🎶<br>พิมพ์ชื่อเพลง แล้วกดค้นหา</p></div>
     <div id="pane-chart" class="hidden space-y-2"></div>
     <div id="pane-queue" class="hidden space-y-2"></div>
@@ -169,6 +173,7 @@ button:disabled{opacity:.45}
       </div>
     </div>
 
+    </div>
     <!-- ===== โหมดทายเพลง ===== -->
     <div id="quizUI" class="hidden space-y-4">
       <div class="flex items-center justify-between">
@@ -474,11 +479,11 @@ function ensurePlaying(my) {      // เคยแตะเริ่มแล้�
       if (st === 1 || st === 3) return;
       if (mode !== 'quiz' && paused) return;
       if (mode === 'quiz' && quiz.buzz.length) return;           // หยุดเพราะมีคนกด BUZZ ไม่ใช่เล่นไม่ได้
-      if (stage < 2 && started) { player.playVideo(); setTimeout(() => tryPlay(stage + 1), 1500); return; }
+      if (stage < 2 && started) { player.playVideo(); setTimeout(() => tryPlay(stage + 1), 3500); return; }
       needSound = true; player.mute(); player.playVideo(); $('tapPlay').classList.remove('hidden');
     } catch {}
   };
-  setTimeout(() => tryPlay(0), 1500);
+  setTimeout(() => tryPlay(0), started ? 3000 : 1500);      // 3 + 3.5 + 3.5 = ราว 10 วินาที
 }
 function ytEvents() {
   return {
@@ -551,7 +556,7 @@ onValue(ref(db, `rooms/${roomId}/quiz`), snap => {
   const v = snap.val() || {}, now = Date.now(), prev = quiz;
   quiz = {
     adminId: v.adminId || null, round: v.round || null,
-    buzz: Object.entries(v.buzz || {}).map(([id, b]) => ({ id, ...b })).sort((a, b) => (a.ts || now) - (b.ts || now)),
+    buzz: Object.entries(v.buzz || {}).map(([id, b]) => ({ id, ...b })).sort((a, b) => (a.seq || 99) - (b.seq || 99) || (a.ts || now) - (b.ts || now)),
     scores: Object.entries(v.scores || {}).map(([id, s]) => ({ id, ...s })).sort((a, b) => b.score - a.score)
   };
   if (isMain) { quizMainSync(prev); renderQuizMain(); } else renderQuizPhone();
@@ -607,8 +612,14 @@ function renderQuizMain() {
     $('qcText').textContent = 'เพลงลึกลับกำลังเล่น...';
     $('qcSub').textContent = 'ใครรู้ชื่อเพลง กดปุ่ม BUZZ บนมือถือได้เลย!';
   }
-  $('hudBuzz').innerHTML = quiz.buzz.length ? quiz.buzz.slice(0, 6).map((b, i) => `<div class="${i === 0 ? 'text-amber-300 font-bold' : 'text-slate-200'} flex justify-between"><span>${i + 1}. ${esc(b.name)}</span><span>${b.judged === '+' ? '✅' : b.judged === '-' ? '❌' : ''}</span></div>`).join('') : '<span class="text-slate-500">ยังไม่มีคนกด</span>';
-  $('hudScores').innerHTML = quiz.scores.length ? quiz.scores.slice(0, 6).map((p, i) => `<div class="flex justify-between text-slate-100"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${esc(p.name)}</span><span class="font-bold text-amber-300">${p.score}</span></div>`).join('') : '<span class="text-slate-500">ยังไม่มีคะแนน</span>';
+  $('hudBuzz').innerHTML = [0, 1].map(i => {
+    const b = quiz.buzz[i];
+    if (!b) return `<div class="rounded-3xl border-2 border-dashed border-white/20 px-6 py-4 min-w-[12rem] md:min-w-[17rem] text-slate-400"><p class="text-xs md:text-base font-semibold tracking-widest">คนที่ ${i + 1}</p><p class="text-2xl md:text-4xl font-bold mt-1">รอคนกด…</p></div>`;
+    const tone = b.judged === '+' ? 'ring-emerald-400 bg-emerald-500/25' : b.judged === '-' ? 'ring-rose-400 bg-rose-500/25' : i === 0 ? 'ring-amber-300 bg-amber-400/20 animate-pulse' : 'ring-sky-300 bg-sky-400/15';
+    const mark = b.judged === '+' ? '✅' : b.judged === '-' ? '❌' : '🔔';
+    return `<div class="glass rounded-3xl ring-4 ${tone} px-6 py-4 min-w-[12rem] md:min-w-[17rem]"><p class="text-xs md:text-base font-semibold tracking-widest text-white/80">${mark} คนที่ ${i + 1}</p><p class="text-3xl md:text-6xl font-extrabold text-white mt-1 truncate max-w-[16rem] md:max-w-[22rem]">${esc(b.name)}</p></div>`;
+  }).join('');
+  $('hudScores').innerHTML = quiz.scores.length ? quiz.scores.slice(0, 8).map((p, i) => `<div class="flex items-center justify-between gap-3 rounded-2xl px-4 py-2 ${i === 0 ? 'bg-amber-400/15' : 'bg-white/5'}"><span class="truncate text-xl md:text-3xl font-bold text-white">${['🥇', '🥈', '🥉'][i] || `<span class="inline-block w-8 text-slate-500">${i + 1}</span>`} ${esc(p.name)}</span><span class="text-3xl md:text-5xl font-black text-amber-300 tabular-nums">${p.score}</span></div>`).join('') : '<p class="text-lg md:text-2xl text-slate-500 py-4 text-center">ยังไม่มีคะแนน</p>';
 }
 
 /* ======= เสียงเอฟเฟกต์ ======= */
@@ -901,25 +912,31 @@ function renderQuizPhone() {
   $('qAdmin').classList.toggle('hidden', !isAdmin);
   $('qPlayer').classList.toggle('hidden', isAdmin);
   $('qStatus').textContent = !r ? '⏳ รอแอดมินเลือก/สุ่มเพลง...' : rev ? `✅ เฉลย: ${r.title}` : quiz.buzz.length ? `🔔 ${quiz.buzz[0].name} กดก่อน!` : `🎵 ข้อที่ ${r.no || 1} กำลังเล่น ใครรู้กด BUZZ!`;
-  const bb = $('buzzBtn'); bb.disabled = !r || rev || mine >= 0;
-  bb.textContent = mine >= 0 ? `คุณกดเป็นลำดับที่ ${mine + 1}` : '🔔 BUZZ!';
+  const bb = $('buzzBtn'); bb.disabled = !r || rev || mine >= 0 || quiz.buzz.length >= 2;
+  bb.textContent = mine >= 0 ? `คุณกดเป็นลำดับที่ ${mine + 1}` : quiz.buzz.length >= 2 ? 'ครบ 2 คนแล้ว' : '🔔 BUZZ!';
   $('qSecret').textContent = r ? `คำตอบ: ${r.title} — ${r.channel || ''} (เริ่มที่ ${fmt(r.start)} จาก ${fmt(r.dur)})` : 'เลือกสุ่มเพลงจากชาร์ต หรือค้นหาเพลงเองด้านล่าง';
   $('qBuzz').innerHTML = quiz.buzz.length ? quiz.buzz.map((b, i) => `<div class="flex items-center gap-2 p-2 rounded-xl bg-slate-900 border ${i === 0 ? 'border-amber-400/60' : 'border-slate-800'}">
     <span class="w-5 text-xs text-slate-500">${i + 1}</span><span class="flex-1 text-sm truncate">${esc(b.name)}</span>
     ${b.judged ? (b.judged === '+' ? '<span class="text-xs">✅ +1</span>' : '<span class="text-xs">❌ −1</span>')
       : (isAdmin ? `<button onclick="quizJudge('${esc(b.id)}',1)" class="px-2.5 py-1 bg-emerald-600 rounded-lg text-xs">✓ +1</button><button onclick="quizJudge('${esc(b.id)}',-1)" class="px-2.5 py-1 bg-rose-600 rounded-lg text-xs">✕ −1</button>` : '')}</div>`).join('')
     : '<p class="text-xs text-slate-600">ยังไม่มีคนกด</p>';
-  $('qScores').innerHTML = quiz.scores.length ? quiz.scores.map((p, i) => `<div class="flex justify-between p-2 rounded-xl bg-slate-900 border border-slate-800 text-sm"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${esc(p.name)}</span><span class="font-bold text-amber-300">${p.score}</span></div>`).join('')
+  $('qScores').innerHTML = quiz.scores.length ? quiz.scores.map((p, i) => `<div class="flex justify-between p-2 rounded-xl bg-slate-900 border border-slate-800 text-sm"><span class="text-base">${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${esc(p.name)}</span><span class="font-black text-xl text-amber-300">${p.score}</span></div>`).join('')
     : '<p class="text-xs text-slate-600">ยังไม่มีคะแนน</p>';
 }
 
 window.buzz = () => {
   const r = quiz.round;
-  if (!r || r.status === 'revealed' || quiz.buzz.some(b => b.id === cid)) return;
+  if (!r || r.status === 'revealed' || quiz.buzz.length >= 2 || quiz.buzz.some(b => b.id === cid)) return;
   const typedName = ($('qNameInput').value.trim() || $('nameInput').value.trim());
   if (!typedName) { $('qNameInput').focus(); return toast('กรุณาใส่ชื่อของคุณก่อนกดปุ่ม BUZZ!'); }
   try { navigator.vibrate && navigator.vibrate(60); } catch {}
-  guard(set(ref(db, `rooms/${roomId}/quiz/buzz/${cid}`), { name: typedName, ts: serverTimestamp() }));
+  runTransaction(ref(db, `rooms/${roomId}/quiz/buzz`), cur => {      // ให้เซิร์ฟเวอร์ตัดสิน: รับแค่ 2 คนแรก และกำหนดลำดับให้
+    cur = cur || {};
+    if (cur[cid] || Object.keys(cur).length >= 2) return;
+    cur[cid] = { name: typedName, seq: Object.keys(cur).length + 1 };
+    return cur;
+  }).then(res => { if (!res.committed) toast('ช้าไปนิด มีคนกด BUZZ ครบ 2 คนแล้ว'); })
+    .catch(e => toast('กดไม่สำเร็จ: ' + (e.code || e.message)));
 };
 
 const isoSec = d => { const m = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(d || ''); return m ? (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0) : 0; };
@@ -947,7 +964,16 @@ window.quizJudge = (pid, d) => {
   const b = quiz.buzz.find(x => x.id === pid); if (!b || b.judged) return;
   guard(update(ref(db, `rooms/${roomId}/quiz/buzz/${pid}`), { judged: d > 0 ? '+' : '-' }));
   guard(runTransaction(ref(db, `rooms/${roomId}/quiz/scores/${pid}`), cur => ({ name: b.name, score: ((cur && cur.score) || 0) + d })));
-  if (d > 0) { quizReveal(); sfx('correct'); } else sfx('fail');
+  if (d > 0) { quizReveal(); sfx('correct'); }
+  else {
+    sfx('fail');
+    if (quiz.buzz.length >= 2 && quiz.buzz.every(x => x.id === pid || x.judged === '-')) {
+      toast('ผิดทั้งสองคน กำลังเล่นเพลงต่อ...');
+      setTimeout(() => {        // รอเสียงผิดจบ แล้วล้างคิว BUZZ ให้จอหลักเล่นต่อและทุกคนกดได้ใหม่
+        if (quiz.buzz.length >= 2 && quiz.buzz.every(x => x.judged === '-')) guard(set(ref(db, `rooms/${roomId}/quiz/buzz`), null));
+      }, 2500);
+    }
+  }
 };
 
 function renderQueue() {
