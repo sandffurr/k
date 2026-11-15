@@ -647,7 +647,7 @@ function renderQuizMain() {
 
 /* ======= เสียงเอฟเฟกต์ ======= */
 const GITHUB_AUDIO_BASE = 'https://raw.githubusercontent.com/sandffurr/karaokeparty/main/';
-const SFX_FILES = { clap: 'Crowd Cheering.mp3', horn: 'Horn.mp3', drum: 'Drum.mp3', whistle: 'Wolf Whistle.mp3', buzz: 'Buzzer.mp3', correct: 'Correct.mp3', fail: 'Fail.mp3', ding: 'Buzzer.mp3' };
+const SFX_FILES = { clap: 'Crowd Cheering.mp3', horn: 'Horn.mp3', drum: 'Drum.mp3', whistle: 'Wolf Whistle.mp3', buzz: 'Buzzer.mp3', correct: 'Correct.mp3', fail: 'Fail.mp3', ding: 'Button.mp3' };
 const sfxCache = {}, SFX = {};
 const sfxUrl = k => GITHUB_AUDIO_BASE + encodeURIComponent(SFX_FILES[k]);
 Object.keys(SFX_FILES).forEach(k => {
