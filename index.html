@@ -8,6 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
+.pre-box{opacity:0!important;pointer-events:none!important;z-index:-1!important}
 .sym{font-family:'Segoe UI Symbol','Noto Sans Symbols 2','Noto Sans Symbols','Apple Symbols',sans-serif}
 html,body{font-family:'Prompt',sans-serif;touch-action:manipulation;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
 input,select,textarea{font-size:16px!important}
@@ -49,6 +50,7 @@ button:disabled{opacity:.45}
 <!-- ===================== จอหลัก (ทีวี/คอม) ===================== -->
 <div id="mainView" class="hidden fixed inset-0 bg-black overflow-hidden select-none">
   <div id="playerContainer" class="absolute inset-0"></div>
+  <div id="preContainer" class="pre-box absolute inset-0"></div>
   <div class="absolute inset-0 z-[5]"></div>
   <div id="floatingReactions" class="absolute inset-0 pointer-events-none overflow-hidden z-20"></div>
 
@@ -363,7 +365,7 @@ onValue(queueRef, snap => {
   const d = snap.val() || {};
   queue = Object.keys(d).map(k => ({ id: k, ...d[k] })).sort((a, b) => (a.ts || 0) - (b.ts || 0));
   queueLoaded = true;
-  if (isMain) { updateIdle(); maybeAdvance(); } else renderQueue();
+  if (isMain) { updateIdle(); maybeAdvance(); if (mode !== 'quiz' && currentSong && player) { clearTimeout(preTimer); preTimer = setTimeout(preloadNext, 1500); } } else renderQueue();
 }, dbErr);
 
 onValue(stateRef, snap => {
@@ -492,18 +494,48 @@ function ensurePlaying(my) {      // รอให้เพลงโหลดเ�
   };
   loadTimer = setTimeout(check, 10000);
 }
+let pre = null, preId = null, preReady = false, preTimer;
+function dropPre() { if (pre) { try { pre.destroy(); } catch {} } pre = null; preId = null; preReady = false; const b = $('preContainer'); if (b) b.innerHTML = ''; }
+function preloadNext() {      // โหลดเพลงคิวถัดไปไว้ในตัวเล่นสำรอง (ปิดเสียง) พอมีข้อมูลแล้วหยุดไว้ ให้เพลงถัดไปเริ่มเร็ว
+  if (!isMain || mode === 'quiz' || !started || !currentSong || !player || !(window.YT && YT.Player)) return;
+  try { const st = player.getPlayerState(); if (st !== 1 && st !== 2) return; } catch { return; }
+  const nx = queue[0], id = nx && videoId(nx.url);
+  if (!id) return dropPre();
+  if (id === preId) return;
+  dropPre(); preId = id;
+  $('preContainer').innerHTML = '<div id="ytPre" class="w-full h-full"></div>';
+  pre = new YT.Player('ytPre', {
+    width: '100%', height: '100%', videoId: id,
+    playerVars: { autoplay: 1, mute: 1, controls: 0, rel: 0, playsinline: 1, modestbranding: 1, iv_load_policy: 3, disablekb: 1, fs: 0, cc_load_policy: ccEnabled ? 1 : 0, cc_lang_pref: 'th' },
+    events: ytEvents()
+  });
+}
+function swapToPre(my) {      // ตัวสำรองที่โหลดไว้แล้วขึ้นมาเป็นตัวหลักทันที (สลับกล่องแทนการย้าย iframe เพื่อไม่ให้โหลดใหม่)
+  const A = $('playerContainer'), B = $('preContainer'), old = player;
+  player = pre; pre = null; preId = null; preReady = false;
+  A.id = 'preContainer'; B.id = 'playerContainer';
+  A.classList.add('pre-box'); B.classList.remove('pre-box');
+  try { old.destroy(); } catch {}
+  A.innerHTML = '';
+  try { player.seekTo(0, true); player.unMute(); player.setVolume(100); player.playVideo(); applyCC(); } catch {}
+  ensurePlaying(my);
+}
 function ytEvents() {
   return {
-    onReady: () => { try { player.playVideo(); } catch {} applyCC(); if (mode !== 'quiz') applyPause(); ensurePlaying(playToken); },
+    onReady: e => {
+      if (e.target === pre) { try { e.target.mute(); e.target.playVideo(); } catch {} return; }
+      try { player.unMute(); player.setVolume(100); player.playVideo(); } catch {} applyCC(); if (mode !== 'quiz') applyPause(); ensurePlaying(playToken); },
     onStateChange: e => {
+      if (e.target === pre) { if (e.data === 1 && !preReady) { preReady = true; try { e.target.pauseVideo(); } catch {} } return; }
       if (e.data === 1 || e.data === 2) { showLoading(false); clearTimeout(loadTimer); }
-      if (e.data === 1) { applyCC(); if (!needSound) $('tapPlay').classList.add('hidden'); }
+      if (e.data === 1) { applyCC(); if (!needSound) $('tapPlay').classList.add('hidden'); if (mode !== 'quiz') setTimeout(preloadNext, 3000); }
       if (e.data === 0) {
         if (mode === 'quiz') { const r = quiz.round; if (r && r.status !== 'revealed') { try { player.seekTo(r.start, true); player.playVideo(); } catch {} } }
         else if (currentSong) skipSong();
       }
     },
-    onError: () => {
+    onError: e => {
+      if (e.target === pre) { dropPre(); return; }
       showLoading(false);
       if (mode === 'quiz') return toast('เพลงนี้เล่นไม่ได้ ให้แอดมินสุ่มเพลงใหม่');
       const tk = playToken; toast('เพลงนี้เล่นไม่ได้ ข้ามไปเพลงถัดไป');
@@ -547,7 +579,7 @@ async function showSong(song) {
   guard(set(ref(db, `rooms/${roomId}/history/${id}`), { title: song.title, vid: id, by: song.addedBy || '', ts: Date.now() }));
   await loadYT();
   if (my !== playToken) return;
-  makeOrLoad(id, 0, my);
+  if (pre && preId === id && player) swapToPre(my); else { dropPre(); makeOrLoad(id, 0, my); }
 }
 let srvOff = 0;
 onValue(ref(db, '.info/serverTimeOffset'), snap => { srvOff = snap.val() || 0; });
@@ -583,7 +615,7 @@ onValue(ref(db, `rooms/${roomId}/quiz`), snap => {
   if (isMain) { quizMainSync(prev); renderQuizMain(); } else renderQuizPhone();
 }, dbErr);
 
-function killPlayer() { playToken++; showLoading(false); clearTimeout(loadTimer); if (player && player.stopVideo) { try { player.stopVideo(); } catch {} } $('tapPlay').classList.add('hidden'); }
+function killPlayer() { playToken++; dropPre(); showLoading(false); clearTimeout(loadTimer); if (player && player.stopVideo) { try { player.stopVideo(); } catch {} } $('tapPlay').classList.add('hidden'); }
 function applyMode() {
   if (!isMain) return;
   killPlayer();
