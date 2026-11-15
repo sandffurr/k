@@ -102,10 +102,9 @@ button:disabled{opacity:.45}
 <div id="phoneView" class="hidden min-h-screen max-w-md mx-auto">
   <header class="sticky top-0 z-30 bg-slate-950/85 backdrop-blur-xl border-b border-white/5 px-4 pt-3 pb-3 space-y-3">
     <div class="flex items-center justify-between gap-3">
-      <div class="flex items-center gap-2 min-w-0">
-        <span id="connDot" class="w-2.5 h-2.5 rounded-full bg-slate-500 shrink-0"></span>
-        <h1 class="font-extrabold text-lg tracking-tight">🎤 Party<span class="grad-text">Karaoke</span></h1>
-        <span id="roomLabel" class="text-[11px] text-slate-500 truncate"></span>
+      <div class="min-w-0 flex-1">
+        <h1 class="font-extrabold text-lg tracking-tight leading-tight whitespace-nowrap">🎤 Party<span class="grad-text">Karaoke</span></h1>
+        <p class="flex items-center gap-1.5 text-[11px] text-slate-400 leading-tight mt-0.5"><span id="connDot" class="w-2 h-2 rounded-full bg-slate-500 shrink-0"></span><span id="roomLabel" class="truncate"></span></p>
       </div>
       <div class="flex items-center gap-2 shrink-0">
         <input id="nameInput" placeholder="ชื่อของคุณ" maxlength="20" class="w-24 pill px-3 py-2 text-xs outline-none border border-transparent focus:border-pink-500 placeholder:text-slate-500">
@@ -172,9 +171,9 @@ button:disabled{opacity:.45}
 
     <!-- ===== โหมดทายเพลง ===== -->
     <div id="quizUI" class="hidden space-y-4">
-      <div id="modeSwitchQuiz" class="seg">
-        <button class="mode-btn" data-mode="karaoke" onclick="setMode('karaoke')">🎤 คาราโอเกะ</button>
-        <button class="mode-btn" data-mode="quiz" onclick="setMode('quiz')">🎯 ทายเพลง</button>
+      <div class="flex items-center justify-between">
+        <p class="font-bold text-base">🎯 ทายเพลง</p>
+        <button onclick="openSettings()" class="ibtn !w-10 !h-10 !text-base" aria-label="ตั้งค่า">⚙</button>
       </div>
       <div id="qNameBox" class="card p-3 flex items-center gap-2">
         <span class="text-lg pl-1">👤</span>
@@ -243,7 +242,7 @@ button:disabled{opacity:.45}
     <div class="mx-3 mb-2 glass rounded-3xl p-2.5 flex items-center gap-3">
       <img id="npThumb" class="hidden w-12 h-12 rounded-2xl object-cover bg-slate-800" alt="">
       <div id="npIcon" class="w-12 h-12 rounded-2xl grad grid place-items-center text-xl">🎵</div>
-      <div class="min-w-0 flex-1"><p class="text-[10px] text-pink-400 font-semibold tracking-wider">กำลังเล่นบนจอ</p><p id="npTitle" class="text-sm font-semibold truncate">ยังไม่มีเพลง</p></div>
+      <div class="min-w-0 flex-1"><p class="text-[10px] text-pink-400 font-semibold tracking-wider">กำลังเล่นบนจอ</p><p id="npTitle" class="text-sm font-semibold truncate">ยังไม่มีเพลง</p><p id="npBy" class="text-[11px] text-pink-300 truncate"></p></div>
       <button id="pauseBtn" onclick="togglePause()" class="w-11 h-11 rounded-full bg-white text-slate-950 text-lg grid place-items-center">⏸</button>
       <button onclick="skipSong()" class="ibtn">⏭</button>
     </div>
@@ -254,6 +253,14 @@ button:disabled{opacity:.45}
       <button class="nav-btn" data-tab="hist" onclick="tab('hist')"><span>🕘</span><span>เคยเล่น</span></button>
       <button class="nav-btn" data-tab="control" onclick="tab('control')"><span>🎛</span><span>ควบคุม</span></button>
     </nav>
+  </div>
+</div>
+
+<div id="settingsSheet" class="hidden fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-end justify-center" onclick="if(event.target===this)closeSettings()">
+  <div class="w-full max-w-md bg-slate-900 border-t border-white/10 rounded-t-3xl p-5 pb-8 space-y-3">
+    <div class="flex items-center justify-between"><p class="font-semibold">⚙ ตั้งค่า</p><button onclick="closeSettings()" class="ibtn !w-9 !h-9 !text-sm">✕</button></div>
+    <button onclick="renameMe()" class="w-full text-left card p-4 text-sm">👤 เปลี่ยนชื่อของฉัน</button>
+    <button onclick="leaveQuiz()" class="w-full text-left card p-4 text-sm">🎤 กลับโหมดคาราโอเกะ<span class="block label mt-0.5">เกมทายเพลงจะหยุดสำหรับทุกคนในห้อง</span></button>
   </div>
 </div>
 
@@ -324,7 +331,7 @@ const ccRef = ref(db, `rooms/${roomId}/cc`);
 let queue = [], currentSong = null, paused = false, ccEnabled = false, queueLoaded = false, stateLoaded = false, pos = { t: 0, d: 0 }, seeking = false, mode = 'karaoke', modeLoaded = false, quiz = { adminId: null, round: null, buzz: [], scores: [] };
 
 $(isMain ? 'mainView' : 'phoneView').classList.remove('hidden');
-$('roomLabel').textContent = '#' + roomId;
+$('roomLabel').textContent = 'ห้อง #' + roomId;
 $('roomCode').textContent = 'ห้อง #' + roomId;
 
 /* ======= listeners ======= */
@@ -422,7 +429,7 @@ if (isMain) {
   document.addEventListener('keydown', e => { if (started && (e.key === 'f' || e.key === 'F')) document.fullscreenElement ? document.exitFullscreen() : goFullscreen(); });
 }
 window.userStart = async () => {
-  started = true; $('tapPlay').classList.add('hidden');
+  started = true; needSound = false; $('tapPlay').classList.add('hidden');
   try { await document.documentElement.requestFullscreen(); } catch {}
   try { await navigator.wakeLock.request('screen'); } catch {}
   try {
@@ -458,23 +465,26 @@ function applyCC() {
 function applyPause() {
   try { if (!player || !player.getPlayerState) return; if (paused) player.pauseVideo(); else if (player.getPlayerState() === 2) player.playVideo(); } catch {}
 }
-function ensurePlaying(my) {        // autoplay แบบมีเสียงถูกบล็อก -> เล่นแบบปิดเสียงก่อน แล้วขึ้นปุ่มให้แตะเปิดเสียง
-  setTimeout(() => {
+let needSound = false;
+function ensurePlaying(my) {      // เคยแตะเริ่มแล้ว = ลองเล่นซ้ำเงียบ ๆ ก่อน ถ้ายังไม่เล่นจริง ๆ ค่อยเล่นแบบปิดเสียงแล้วขึ้นปุ่มให้แตะ
+  const tryPlay = stage => {
     if (my !== playToken || !player) return;
     try {
       const st = player.getPlayerState();
       if (st === 1 || st === 3) return;
       if (mode !== 'quiz' && paused) return;
-      player.mute(); player.playVideo();
-      $('tapPlay').classList.remove('hidden');
+      if (mode === 'quiz' && quiz.buzz.length) return;           // หยุดเพราะมีคนกด BUZZ ไม่ใช่เล่นไม่ได้
+      if (stage < 2 && started) { player.playVideo(); setTimeout(() => tryPlay(stage + 1), 1500); return; }
+      needSound = true; player.mute(); player.playVideo(); $('tapPlay').classList.remove('hidden');
     } catch {}
-  }, 1200);
+  };
+  setTimeout(() => tryPlay(0), 1500);
 }
 function ytEvents() {
   return {
     onReady: () => { try { player.playVideo(); } catch {} applyCC(); if (mode !== 'quiz') applyPause(); ensurePlaying(playToken); },
     onStateChange: e => {
-      if (e.data === 1) { applyCC(); $('tapPlay').classList.add('hidden'); }
+      if (e.data === 1) { applyCC(); if (!needSound) $('tapPlay').classList.add('hidden'); }
       if (e.data === 0) {
         if (mode === 'quiz') { const r = quiz.round; if (r && r.status !== 'revealed') { try { player.seekTo(r.start, true); player.playVideo(); } catch {} } }
         else if (currentSong) skipSong();
@@ -503,7 +513,7 @@ function makeOrLoad(videoId, start, my) {
 function flashTitle(song) {
   const nx = queue[0];
   $('titleBarText').textContent = song.title;
-  $('titleBarSub').textContent = (song.addedBy ? `เลือกโดย ${song.addedBy}` : '') + (nx ? `${song.addedBy ? '  ·  ' : ''}ถัดไป: ${nx.title}` : '');
+  $('titleBarSub').textContent = (song.addedBy ? `👤 เพิ่มโดย ${song.addedBy}` : '') + (nx ? `${song.addedBy ? '  ·  ' : ''}ถัดไป: ${nx.title}` : '');
   $('titleBar').classList.replace('opacity-0', 'opacity-100');
   clearTimeout(titleTimer); titleTimer = setTimeout(() => $('titleBar').classList.replace('opacity-100', 'opacity-0'), 7000);
 }
@@ -518,7 +528,7 @@ async function showSong(song) {
   const id = videoId(song.url);
   if (!id) { toast('ลิงก์เพลงไม่ถูกต้อง ข้ามไปเพลงถัดไป'); setTimeout(() => my === playToken && skipSong(), 1500); return; }
   flashTitle(song);
-  guard(set(ref(db, `rooms/${roomId}/history/${id}`), { title: song.title, vid: id, ts: Date.now() }));
+  guard(set(ref(db, `rooms/${roomId}/history/${id}`), { title: song.title, vid: id, by: song.addedBy || '', ts: Date.now() }));
   await loadYT();
   if (my !== playToken) return;
   makeOrLoad(id, 0, my);
@@ -658,10 +668,11 @@ function floatEmoji(emoji) {
 const known = new Map(), addedSet = new Set();
 let chartLoaded = false, lastSearch = [], chartItems = [];
 
-function myName() { try { return $('nameInput').value.trim() || 'เพื่อน'; } catch { return 'เพื่อน'; } }
+function myName() { try { return $('nameInput').value.trim() || 'ผู้เล่น-' + cid.slice(0, 3); } catch { return 'เพื่อน'; } }
 function updateNow() {
   $('npTitle').textContent = currentSong ? currentSong.title : 'ยังไม่มีเพลง';
   $('pauseBtn').textContent = paused ? '▶' : '⏸';
+  $('npBy').textContent = currentSong && currentSong.addedBy ? '👤 ' + currentSong.addedBy : '';
   const vid = currentSong && videoId(currentSong.url);
   $('npThumb').src = vid ? thumb(vid) : ''; $('npThumb').classList.toggle('hidden', !vid); $('npIcon').classList.toggle('hidden', !!vid);
 }
@@ -738,7 +749,7 @@ window.karaokeFor = vid => { const it = known.get(vid); if (!it) return; $('q').
 
 function pushSong(vid, title) {
   guard(push(queueRef, { title, url: watchUrl(vid), ts: Date.now(), addedBy: myName() }));
-  addedSet.add(vid); toast('เพิ่ม "' + title + '" เข้าคิวแล้ว');
+  addedSet.add(vid); toast($('nameInput').value.trim() ? 'เพิ่ม "' + title + '" เข้าคิวแล้ว' : 'เพิ่มแล้ว · ใส่ชื่อมุมขวาบน เพื่อให้เห็นว่าใครเพิ่มเพลง');
   if (lastSearch.length) renderSearch(); if (chartLoaded) renderChart();
 }
 window.addVid = vid => { const it = known.get(vid); if (it) pushSong(vid, it.title); };
@@ -763,7 +774,7 @@ let hist = [];
 function renderHist() {
   const el = $('pane-hist');
   if (!hist.length) return msg(el, 'ยังไม่มีเพลงที่เคยเล่นในห้องนี้');
-  el.innerHTML = hist.map(h => rowHtml({ vid: h.vid, title: h.title, channel: 'เคยเล่นแล้ว' })).join('');
+  el.innerHTML = hist.map(h => rowHtml({ vid: h.vid, title: h.title, channel: h.by ? '👤 ' + h.by : 'เคยเล่นแล้ว' })).join('');
 }
 if (!isMain) {
   onValue(posRef, snap => { pos = snap.val() || { t: 0, d: 0 }; updateSeek(); });
@@ -787,11 +798,18 @@ function renderModeUI() {
   renderQuizPhone();
 }
 
+window.openSettings = () => $('settingsSheet').classList.remove('hidden');
+window.closeSettings = () => $('settingsSheet').classList.add('hidden');
+window.renameMe = () => {
+  const v = (prompt('ชื่อของคุณ', $('nameInput').value) || '').trim().slice(0, 20); if (!v) return;
+  $('nameInput').value = v; $('qNameInput').value = v;
+  try { localStorage.setItem('karaokeName', v); } catch {}
+  closeSettings(); toast('เปลี่ยนชื่อเป็น "' + v + '" แล้ว');
+};
+window.leaveQuiz = () => { closeSettings(); setMode('karaoke'); };
 window.setMode = m => {
   if (m === mode) return;
-  if (mode === 'quiz' && quiz.adminId && quiz.adminId !== cid) {
-    return toast('เฉพาะแอดมินที่เปิดโหมดทายเพลงเท่านั้นที่ควบคุมได้');
-  }
+  if (mode === 'quiz' && quiz.adminId && quiz.adminId !== cid && !confirm('กลับโหมดคาราโอเกะ? เกมทายเพลงจะหยุดสำหรับทุกคนในห้อง')) return;
   const u = { mode: m };
   if (m === 'quiz') u['quiz/adminId'] = cid;
   guard(update(ref(db, `rooms/${roomId}`), u));
@@ -879,7 +897,6 @@ function renderQuizPhone() {
   if (isMain || mode !== 'quiz') return;
   const r = quiz.round, isAdmin = quiz.adminId === cid, rev = !!r && r.status === 'revealed';
   const mine = quiz.buzz.findIndex(b => b.id === cid);
-  $('modeSwitchQuiz').classList.toggle('hidden', !isAdmin);
   $('qNameBox').classList.toggle('hidden', isAdmin);
   $('qAdmin').classList.toggle('hidden', !isAdmin);
   $('qPlayer').classList.toggle('hidden', isAdmin);
@@ -942,7 +959,7 @@ function renderQueue() {
     return `<div class="flex items-center gap-3 p-2 rounded-xl bg-slate-900 border border-slate-800">
       <span class="text-xs font-bold text-slate-500 w-4 text-center">${i + 1}</span>
       ${id ? `<img src="${thumb(id)}" loading="lazy" class="w-20 aspect-video object-cover rounded-lg shrink-0 bg-slate-800">` : ''}
-      <div class="min-w-0 flex-1"><p class="text-xs font-medium line-clamp-2">${esc(s.title)}</p><p class="text-[10px] text-slate-400">เพิ่มโดย ${esc(s.addedBy || 'เพื่อน')}</p></div>
+      <div class="min-w-0 flex-1"><p class="text-xs font-medium line-clamp-2">${esc(s.title)}</p><p class="text-[11px] text-pink-300 mt-0.5 truncate">👤 ${esc(s.addedBy || 'เพื่อน')}</p></div>
       <div class="flex flex-col gap-1 shrink-0">
         ${i > 0 ? `<button onclick="moveUp('${esc(s.id)}')" class="px-2 py-1 bg-slate-800 rounded-lg text-xs">⬆ ขึ้นก่อน</button>` : ''}
         <button onclick="removeSong('${esc(s.id)}')" class="px-2 py-1 bg-slate-800 text-red-400 rounded-lg text-xs">🗑 ลบ</button>
