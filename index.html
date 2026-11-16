@@ -152,7 +152,7 @@ button:disabled{opacity:.45}
 
 <!-- ===================== มือถือ ===================== -->
 <div id="phoneView" class="hidden min-h-screen max-w-md mx-auto relative">
-  <!-- กล่อง QR Code ลอยทับด้านบนสุด (Fixed) ตรงตำแหน่งเป๊ะตามตัวอย่าง -->
+  <!-- กล่อง QR Code ลอยทับด้านบนสุด (Fixed) ปรับตำแหน่งชิดขอบบนสุดตามต้องการ -->
   <div id="inlineQrBox" style="top: var(--sat);" class="hidden fixed inset-x-4 z-[85] max-w-sm mx-auto bg-slate-900/95 backdrop-blur-xl border border-pink-500/50 rounded-3xl p-4 text-center space-y-2 shadow-[0_15px_50px_rgba(0,0,0,0.85)]">
     <div class="flex items-center justify-between">
       <p class="text-xs font-semibold text-pink-400">📱 สแกน QR Code จากหน้าจอได้เลย</p>
@@ -1206,14 +1206,20 @@ window.closeInlineQr = () => {
   $('inlineQrBox').classList.add('hidden');
 };
 
-// แตะตรงไหนก็ได้ของหน้าจอเพื่อปิดกล่อง QR Code
+// ปิดกล่อง QR เมื่อมีการแตะหน้าจอ หรือเลื่อนหน้าเว็บ
 document.addEventListener('click', e => {
   const box = $('inlineQrBox');
   if (!box || box.classList.contains('hidden')) return;
   if (e.target.closest('button[onclick="shareRoom()"]')) return;
   closeInlineQr();
 });
-  
+
+window.addEventListener('scroll', () => {
+  const box = $('inlineQrBox');
+  if (!box || box.classList.contains('hidden')) return;
+  closeInlineQr();
+}, { passive: true });
+
 async function yt(path, q) {
   if (!YT_API_KEY) throw { code: 'nokey' };
   const r = await fetch(`https://www.googleapis.com/youtube/v3/${path}?` + new URLSearchParams({ ...q, key: YT_API_KEY }));
