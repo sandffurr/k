@@ -99,6 +99,7 @@ button:disabled{opacity:.45}
       <p id="qcSub" class="text-slate-300 text-base md:text-xl mt-2"></p>
       <div id="qcTimer" class="hidden mt-5 text-6xl md:text-8xl font-black tabular-nums text-amber-300"></div>
       <p id="qcHint" class="hidden mt-3 text-xl md:text-3xl font-semibold text-pink-200 whitespace-pre-line leading-relaxed"></p>
+      <div id="qcPlayers" class="hidden mt-5 flex flex-wrap justify-center gap-2 max-w-2xl"></div>
       <div id="qcQrWrap" class="hidden mt-6 flex flex-col items-center gap-3 glass p-4 rounded-3xl">
         <div class="bg-white p-3 rounded-2xl"><div id="qrQuiz" class="w-44 h-44 md:w-60 md:h-60"></div></div>
         <p class="text-amber-300 text-sm md:text-base font-medium">📱 สแกนเพื่อเข้าร่วมและใส่ชื่อ</p>
@@ -270,6 +271,10 @@ button:disabled{opacity:.45}
         <button onclick="saveQuizName()" class="grad rounded-full px-4 py-2 text-xs font-semibold">ตกลง</button>
       </div>
       <div id="qStatus" class="glass rounded-2xl px-4 py-3 text-center text-sm font-semibold whitespace-pre-line"></div>
+      <div id="qLobbyBox" class="hidden glass rounded-2xl p-3 space-y-2">
+        <p class="label text-center">👥 ผู้เล่นในห้อง (<span id="qLobbyCount">0</span> คน)</p>
+        <div id="qLobbyList" class="flex flex-wrap justify-center gap-1.5"></div>
+      </div>
       <div id="qTeamBox" class="hidden glass rounded-2xl p-3 space-y-2">
         <p class="label text-center">เลือกทีมของคุณ</p>
         <div class="grid grid-cols-2 gap-2">
@@ -1054,10 +1059,19 @@ function renderQuizMain() {
   if (rev) { const ty = qType(r); $('qbTitle').textContent = ty === 'artist' ? answerText(r) : r.title; $('qbSub').textContent = ty === 'artist' ? 'เพลง: ' + r.title : (r.channel || ''); $('qbTag').textContent = (r.timeout ? '⏰ หมดเวลา · เฉลย' : '✅ เฉลย') + (ty === 'artist' ? ' (ศิลปิน/ช่อง)' : ''); }
   $('qcRound').textContent = r ? `🎯 ${QTYPES[qType(r)]} · ข้อที่ ${r.no || 1}${qTotal() ? '/' + qTotal() : ''}` : '🎯 ทายเพลง';
   $('qcQrWrap').classList.toggle('hidden', quiz.buzz.length > 0);
+  const pEntries = Object.entries(quiz.players || {});
+  const showLobby = !r && pEntries.length > 0;
+  $('qcPlayers').classList.toggle('hidden', !showLobby);
+  if (showLobby) {
+    $('qcPlayers').innerHTML = pEntries.map(([id, p]) => {
+      const tm = teamsOn() && quiz.teams[id] ? TEAMS[quiz.teams[id]].emoji + ' ' : '';
+      return `<span class="pill px-4 py-1.5 text-base md:text-xl font-semibold text-white border border-white/15 bg-white/10">👤 ${tm}${esc(p.name)}</span>`;
+    }).join('');
+  }
   if (!r) {
     $('qcIcon').textContent = '🎯';
     $('qcText').textContent = 'โหมดทายเพลง';
-    $('qcSub').textContent = 'สแกน QR Code ด้านล่างเพื่อเข้าร่วมเกมและใส่ชื่อได้เลย!';
+    $('qcSub').textContent = pEntries.length ? `พร้อมเล่นแล้ว ${pEntries.length} คน · รอแอดมินเริ่มข้อแรก` : 'สแกน QR Code ด้านล่างเพื่อเข้าร่วมเกมและใส่ชื่อได้เลย!';
   }
   else if (quiz.buzz.length) {
     $('qcIcon').textContent = '🔔';
@@ -1262,8 +1276,7 @@ if (!isMain) {
 window.saveQuizName = () => {
   const val = $('qNameInput').value.trim();
   if (!val) return toast('กรุณาใส่ชื่อก่อน');
-  $('nameInput').value = val;
-  try { localStorage.setItem('karaokeName', val); } catch {}
+  applyName(val);
   toast('บันทึกชื่อ "' + val + '" แล้ว!');
 };
 
@@ -1280,8 +1293,7 @@ window.openSettings = () => $('settingsSheet').classList.remove('hidden');
 window.closeSettings = () => $('settingsSheet').classList.add('hidden');
 window.renameMe = () => {
   const v = (prompt('ชื่อของคุณ', $('nameInput').value) || '').trim().slice(0, 20); if (!v) return;
-  $('nameInput').value = v; $('qNameInput').value = v;
-  try { localStorage.setItem('karaokeName', v); } catch {}
+  applyName(v);
   closeSettings(); toast('เปลี่ยนชื่อเป็น "' + v + '" แล้ว');
 };
 window.leaveQuiz = () => { closeSettings(); setMode('karaoke'); };
@@ -1373,9 +1385,16 @@ function renderQuizPhone() {
   const g = quiz.game || {}, tot = qTotal();
   const ty = qType(r), revLine = r ? (ty === 'artist' ? `${answerText(r)} (เพลง: ${r.title})` : r.title) : '';
   $('qStatus').textContent = g.over ? `🏁 จบเกมแล้ว · ${winnerText()}` : !r ? '⏳ รอแอดมินเลือก/สุ่มเพลง...' : rev ? (r.timeout ? `⏰ หมดเวลา · เฉลย: ${revLine}` : `✅ เฉลย: ${revLine}`) : quiz.buzz.length ? `🔔 ${quiz.buzz[0].name} กดก่อน!` : `${QTYPES[ty]} · ข้อที่ ${r.no || 1}${tot ? '/' + tot : ''}${ty === 'lyric' ? `\n“${r.clue}”` : ''}\nใครรู้กด BUZZ!`;
+  const pEntries = Object.entries(quiz.players || {});
+  $('qLobbyBox').classList.toggle('hidden', !!r || pEntries.length === 0);
+  $('qLobbyCount').textContent = pEntries.length;
+  $('qLobbyList').innerHTML = pEntries.map(([id, p]) => {
+    const tm = teamsOn() && quiz.teams[id] ? TEAMS[quiz.teams[id]].emoji + ' ' : '';
+    return `<span class="px-3 py-1 rounded-full bg-white/10 text-xs font-medium text-slate-200">${tm}${esc(p.name)}</span>`;
+  }).join('');
   $('qTeamBox').classList.toggle('hidden', isAdmin || !teamsOn());
   ['A', 'B'].forEach(k => { const on = quiz.teams[cid] === k; $('teamBtn' + k).style.cssText = on ? `background:${TEAMS[k].color};color:#fff` : 'background:#1c1c2c;color:#8b8ba3'; });
-  $('playerCount').textContent = Object.keys(quiz.players).length;
+  $('playerCount').textContent = pEntries.length;
   registerPlayer(isAdmin);
   const open = buzzWindowOpen();
   const bb = $('buzzBtn'); bb.disabled = !r || rev || mine >= 0 || !open || !!g.over;
@@ -1463,9 +1482,16 @@ window.prepLyric = id => {      // ข้อทายจากเนื้อเ
   toast('เตรียมข้อทายจากเนื้อเพลงแล้ว');
 };
 let registeredName = '';
-function registerPlayer(isAdmin) {      // ลงชื่อผู้เล่นที่เข้าหน้าเกม ไว้ให้แอดมินสุ่มแบ่งทีม
+function registerPlayer(isAdmin) {      // ลงชื่อผู้เล่นที่เข้าหน้าเกม ไว้ให้แอดมินสุ่มแบ่งทีม (แอดมินเป็นแค่พิธีกรไม่ลงชื่อ)
+  if (isAdmin) {
+    if (registeredName) {
+      registeredName = '';
+      guard(remove(ref(db, `rooms/${roomId}/quiz/players/${cid}`)));
+    }
+    return;
+  }
   const n = ($('nameInput').value || '').trim();
-  if (isAdmin || !n || n === registeredName) return;
+  if (!n || n === registeredName) return;
   registeredName = n;
   guard(set(ref(db, `rooms/${roomId}/quiz/players/${cid}`), { name: n }));
 }
@@ -1656,7 +1682,12 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigat
 
 /* ======= บังคับใส่ชื่อก่อนใช้งาน (มือถือ) ======= */
 function getSavedName() { try { return (localStorage.getItem('karaokeName') || '').trim(); } catch { return ''; } }
-function applyName(v) { $('nameInput').value = v; $('qNameInput').value = v; try { localStorage.setItem('karaokeName', v); } catch {} }
+function applyName(v) {
+  $('nameInput').value = v;
+  $('qNameInput').value = v;
+  try { localStorage.setItem('karaokeName', v); } catch {}
+  if (mode === 'quiz') registerPlayer(quiz.adminId === cid);
+}
 window.saveGateName = () => {
   const v = $('gateName').value.trim().slice(0, 20);
   if (!v) { toast('ใส่ชื่อของคุณก่อนนะ'); $('gateName').focus(); return; }
