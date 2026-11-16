@@ -1206,6 +1206,14 @@ window.closeInlineQr = () => {
   $('inlineQrBox').classList.add('hidden');
 };
 
+// แตะตรงไหนก็ได้ของหน้าจอเพื่อปิดกล่อง QR Code
+document.addEventListener('click', e => {
+  const box = $('inlineQrBox');
+  if (!box || box.classList.contains('hidden')) return;
+  if (e.target.closest('button[onclick="shareRoom()"]')) return;
+  closeInlineQr();
+});
+  
 async function yt(path, q) {
   if (!YT_API_KEY) throw { code: 'nokey' };
   const r = await fetch(`https://www.googleapis.com/youtube/v3/${path}?` + new URLSearchParams({ ...q, key: YT_API_KEY }));
