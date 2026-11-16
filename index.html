@@ -1192,10 +1192,14 @@ window.shareRoom = async () => {
     $('inlineQrSvg').innerHTML = q.createSvgTag({ scalable: true });
     $('inlineQrRoom').textContent = 'ห้อง #' + roomId;
     $('inlineQrBox').classList.remove('hidden');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // สั่งเลื่อนหน้าจอขึ้นไปด้านบนสุดทันทีแบบสุดขอบ
+    window.scrollTo({ top: 0, behavior: 'instant' });
   } catch {
     $('inlineQrSvg').textContent = phoneLink;
   }
+
+  // เรียกหน้าต่างแชร์ Native ของไอโฟนขึ้นมา
   try {
     if (navigator.share) {
       await navigator.share({ title: 'Party Karaoke', url: phoneLink });
