@@ -915,15 +915,15 @@ onValue(ref(db, `rooms/${roomId}/quiz`), snap => {
   const v = snap.val() || {}, now = Date.now(), prev = quiz;
   const rawPlayers = v.players || {};
   const activePlayers = {};
-  // กรองเฉพาะผู้เล่นที่ส่งสัญญาณ Active ภายใน 25 วินาทีล่าสุด และต้องไม่ใช่ Admin
-  Object.entries(rawPlayers).forEach(([id, p]) => {
-    if (p && id !== v.adminId && now - (p.lastSeen || 0) < 25000) {
-      activePlayers[id] = p;
+  // เช็คเฉพาะชื่อและเวลา Active (ไม่บล็อกเครื่องเดียวกัน)
+  Object.entries(rawPlayers).forEach(([nameKey, p]) => {
+    if (p && nameKey !== v.adminName && now - (p.lastSeen || 0) < 25000) {
+      activePlayers[nameKey] = p;
     }
   });
 
   quiz = {
-    adminId: v.adminId || null, round: v.round || null, game: v.game || {}, teams: v.teams || {}, teamScores: v.teamScores || {}, players: activePlayers, prep: Object.entries(v.prep || {}).map(([id, p]) => ({ id, ...p })).sort((a, b) => (a.ts || 0) - (b.ts || 0)),
+    adminId: v.adminId || null, adminName: v.adminName || null, round: v.round || null, game: v.game || {}, teams: v.teams || {}, teamScores: v.teamScores || {}, players: activePlayers, prep: Object.entries(v.prep || {}).map(([id, p]) => ({ id, ...p })).sort((a, b) => (a.ts || 0) - (b.ts || 0)),
     buzz: Object.entries(v.buzz || {}).map(([id, b]) => ({ id, ...b })).sort((a, b) => (a.seq || 99) - (b.seq || 99) || (a.ts || now) - (b.ts || now)),
     scores: Object.entries(v.scores || {}).map(([id, s]) => ({ id, ...s })).sort((a, b) => b.score - a.score)
   };
@@ -1096,8 +1096,8 @@ function renderQuizMain() {
   const showLobby = !r && pEntries.length > 0;
   $('qcPlayers').classList.toggle('hidden', !showLobby);
   if (showLobby) {
-    $('qcPlayers').innerHTML = pEntries.map(([id, p]) => {
-      const tm = teamsOn() && quiz.teams[id] ? TEAMS[quiz.teams[id]].emoji + ' ' : '';
+    $('qcPlayers').innerHTML = pEntries.map(([nameKey, p]) => {
+      const tm = teamsOn() && quiz.teams[nameKey] ? TEAMS[quiz.teams[nameKey]].emoji + ' ' : '';
       return `<span class="pill px-4 py-1.5 text-base md:text-xl font-semibold text-white border border-white/15 bg-white/10">👤 ${tm}${esc(p.name)}</span>`;
     }).join('');
   }
@@ -1398,7 +1398,8 @@ window.setMode = m => {
   const u = { mode: m };
   if (m === 'quiz') {
     u['quiz/adminId'] = cid;
-    u[`quiz/players/${cid}`] = null; // ลบชื่อแอดมินออกจากรายชื่อผู้เล่นทันทีที่ตั้งเป็นแอดมิน
+    const adminName = ($('nameInput').value || '').trim();
+    if (adminName) u['quiz/adminName'] = adminName;
   }
   guard(update(ref(db, `rooms/${roomId}`), u));
 };
@@ -1444,7 +1445,8 @@ window.sendCmd = sendCmd;
 function renderQuizPhone() {
   if (isMain || mode !== 'quiz') return;
   const r = quiz.round, isAdmin = quiz.adminId === cid, rev = !!r && r.status === 'revealed';
-  const mine = quiz.buzz.findIndex(b => b.id === cid);
+  const myNameKey = ($('nameInput').value || '').trim();
+  const mine = quiz.buzz.findIndex(b => b.id === myNameKey || b.id === cid);
   $('qNameBox').classList.toggle('hidden', isAdmin);
   $('qAdmin').classList.toggle('hidden', !isAdmin);
   $('qPlayer').classList.toggle('hidden', isAdmin);
@@ -1454,12 +1456,12 @@ function renderQuizPhone() {
   const pEntries = Object.entries(quiz.players || {});
   $('qLobbyBox').classList.toggle('hidden', !!r || pEntries.length === 0);
   $('qLobbyCount').textContent = pEntries.length;
-  $('qLobbyList').innerHTML = pEntries.map(([id, p]) => {
-    const tm = teamsOn() && quiz.teams[id] ? TEAMS[quiz.teams[id]].emoji + ' ' : '';
+  $('qLobbyList').innerHTML = pEntries.map(([nameKey, p]) => {
+    const tm = teamsOn() && quiz.teams[nameKey] ? TEAMS[quiz.teams[nameKey]].emoji + ' ' : '';
     return `<span class="px-3 py-1 rounded-full bg-white/10 text-xs font-medium text-slate-200">${tm}${esc(p.name)}</span>`;
   }).join('');
   $('qTeamBox').classList.toggle('hidden', isAdmin || !teamsOn());
-  ['A', 'B'].forEach(k => { const on = quiz.teams[cid] === k; $('teamBtn' + k).style.cssText = on ? `background:${TEAMS[k].color};color:#fff` : 'background:#1c1c2c;color:#8b8ba3'; });
+  ['A', 'B'].forEach(k => { const on = quiz.teams[myNameKey] === k; $('teamBtn' + k).style.cssText = on ? `background:${TEAMS[k].color};color:#fff` : 'background:#1c1c2c;color:#8b8ba3'; });
   $('playerCount').textContent = pEntries.length;
   registerPlayer(isAdmin);
   const open = buzzWindowOpen();
@@ -1489,17 +1491,17 @@ window.adminAdjustScore = (pid, delta) => {
 
 window.buzz = () => {
   const r = quiz.round;
-  if (!r || r.status === 'revealed' || !buzzWindowOpen() || quiz.buzz.some(b => b.id === cid)) return;
-  if (teamsOn() && !quiz.teams[cid]) return toast('เลือกทีมของคุณก่อนกด BUZZ');
   const typedName = ($('qNameInput').value.trim() || $('nameInput').value.trim());
   if (!typedName) { $('qNameInput').focus(); return toast('กรุณาใส่ชื่อของคุณก่อนกดปุ่ม BUZZ!'); }
+  if (!r || r.status === 'revealed' || !buzzWindowOpen() || quiz.buzz.some(b => b.id === typedName || b.id === cid)) return;
+  if (teamsOn() && !quiz.teams[typedName]) return toast('เลือกทีมของคุณก่อนกด BUZZ');
   try { navigator.vibrate && navigator.vibrate(60); } catch {}
   runTransaction(ref(db, `rooms/${roomId}/quiz/buzz`), cur => {
     cur = cur || {};
     const keys = Object.keys(cur), t = srvNow();
-    if (cur[cid] || keys.length >= 2) return;
+    if (cur[typedName] || keys.length >= 2) return;
     if (keys.length === 1 && cur[keys[0]].at && t - cur[keys[0]].at > BUZZ_WINDOW + 400) return;
-    cur[cid] = { name: typedName, seq: keys.length + 1, at: t, team: teamsOn() ? (quiz.teams[cid] || '') : '' };
+    cur[typedName] = { name: typedName, seq: keys.length + 1, at: t, team: teamsOn() ? (quiz.teams[typedName] || '') : '' };
     return cur;
   }).then(res => { if (!res.committed) toast('ช้าไปนิด ปิดรับการกดแล้ว'); })
     .catch(e => toast('กดไม่สำเร็จ: ' + (e.code || e.message)));
@@ -1575,39 +1577,49 @@ window.prepLyric = id => {
 let registeredName = '';
 function registerPlayer(isAdmin) {
   if (isAdmin) {
-    if (registeredName) {
+    const oldName = registeredName;
+    if (oldName) {
       registeredName = '';
-      guard(remove(ref(db, `rooms/${roomId}/quiz/players/${cid}`)));
+      guard(remove(ref(db, `rooms/${roomId}/quiz/players/${oldName}`)));
     }
     return;
   }
   const n = ($('nameInput').value || '').trim();
   if (!n) return;
+  if (registeredName && registeredName !== n) {
+    guard(remove(ref(db, `rooms/${roomId}/quiz/players/${registeredName}`)));
+  }
   registeredName = n;
-  guard(set(ref(db, `rooms/${roomId}/quiz/players/${cid}`), { name: n, lastSeen: serverTimestamp() }));
+  guard(set(ref(db, `rooms/${roomId}/quiz/players/${n}`), { name: n, lastSeen: serverTimestamp() }));
 }
 
-// ยิง Heartbeat ทุกๆ 10 วินาที เฉพาะผู้เล่นทั่วไป (ไม่รวมแอดมิน)
+// ยิง Heartbeat เช็กจาก "ชื่อ" (เปิดหลายหน้าต่างได้ ถือเป็นคนละชื่อ)
 setInterval(() => {
   if (isMain || mode !== 'quiz') return;
   if (quiz.adminId === cid) {
-    guard(remove(ref(db, `rooms/${roomId}/quiz/players/${cid}`)));
+    const n = ($('nameInput').value || '').trim();
+    if (n) guard(remove(ref(db, `rooms/${roomId}/quiz/players/${n}`)));
     return;
   }
   const n = ($('nameInput').value || '').trim();
   if (n) {
-    guard(update(ref(db, `rooms/${roomId}/quiz/players/${cid}`), { name: n, lastSeen: serverTimestamp() }));
+    guard(update(ref(db, `rooms/${roomId}/quiz/players/${n}`), { name: n, lastSeen: serverTimestamp() }));
   }
 }, 10000);
 
-window.chooseTeam = k => guard(set(ref(db, `rooms/${roomId}/quiz/teams/${cid}`), k));
+window.chooseTeam = k => {
+  const n = ($('nameInput').value || '').trim();
+  if (!n) return toast('กรุณาใส่ชื่อก่อนเลือกทีม');
+  guard(set(ref(db, `rooms/${roomId}/quiz/teams/${n}`), k));
+};
+
 window.teamShuffle = () => {
   if (quiz.adminId !== cid) return;
-  const ids = Object.keys(quiz.players).sort(() => Math.random() - 0.5);
-  if (!ids.length) return toast('ยังไม่มีผู้เล่นในห้อง');
-  const map = {}; ids.forEach((id, i) => { map[id] = i % 2 ? 'B' : 'A'; });
+  const keys = Object.keys(quiz.players).sort(() => Math.random() - 0.5);
+  if (!keys.length) return toast('ยังไม่มีผู้เล่นในห้อง');
+  const map = {}; keys.forEach((nameKey, i) => { map[nameKey] = i % 2 ? 'B' : 'A'; });
   guard(update(ref(db, `rooms/${roomId}/quiz`), { teams: map }));
-  toast(`แบ่งทีมให้ผู้เล่น ${ids.length} คนแล้ว`);
+  toast(`แบ่งทีมให้ผู้เล่น ${keys.length} คนแล้ว`);
 };
 
 let shareDataUrl = '';
