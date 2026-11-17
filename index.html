@@ -284,7 +284,7 @@ button:disabled{opacity:.45}
       </div>
       <div id="qStatus" class="glass rounded-2xl px-4 py-3 text-center text-sm font-semibold whitespace-pre-line"></div>
       <div id="qLobbyBox" class="hidden glass rounded-2xl p-3 space-y-2">
-        <p class="label text-center">👥 ผู้เล่นActiveในห้อง (<span id="qLobbyCount">0</span> คน)</p>
+        <p class="label text-center">👥 ผู้เล่นในห้อง (<span id="qLobbyCount">0</span> คน)</p>
         <div id="qLobbyList" class="flex flex-wrap justify-center gap-1.5"></div>
       </div>
       <div id="qTeamBox" class="hidden glass rounded-2xl p-3 space-y-2">
@@ -327,7 +327,7 @@ button:disabled{opacity:.45}
             <button data-cfg="teams" data-val="0" onclick="setQuizCfg('teams',false)">เล่นเดี่ยว</button>
             <button data-cfg="teams" data-val="1" onclick="setQuizCfg('teams',true)">2 ทีม</button>
           </div>
-          <button onclick="teamShuffle()" class="chip w-full">🎲 สุ่มแบ่งทีมจากผู้เล่นที่Active (<span id="playerCount">0</span> คน)</button>
+          <button onclick="teamShuffle()" class="chip w-full">🎲 สุ่มแบ่งทีมจากผู้เล่น (<span id="playerCount">0</span> คน)</button>
           <p class="label">เวลาต่อข้อ (วินาที)</p>
           <div class="seg">
             <button data-cfg="limit" data-val="30" onclick="setQuizCfg('limit',30)">30</button>
@@ -915,9 +915,9 @@ onValue(ref(db, `rooms/${roomId}/quiz`), snap => {
   const v = snap.val() || {}, now = Date.now(), prev = quiz;
   const rawPlayers = v.players || {};
   const activePlayers = {};
-  // กรองเฉพาะผู้เล่นที่ส่งสัญญาณ Active ภายใน 25 วินาทีล่าสุด
+  // กรองเฉพาะผู้เล่นที่ส่งสัญญาณ Active ภายใน 25 วินาทีล่าสุด และต้องไม่ใช่ Admin
   Object.entries(rawPlayers).forEach(([id, p]) => {
-    if (p && now - (p.lastSeen || 0) < 25000) {
+    if (p && id !== v.adminId && now - (p.lastSeen || 0) < 25000) {
       activePlayers[id] = p;
     }
   });
@@ -1104,7 +1104,7 @@ function renderQuizMain() {
   if (!r) {
     $('qcIcon').textContent = '🎯';
     $('qcText').textContent = 'โหมดทายเพลง';
-    $('qcSub').textContent = pEntries.length ? `พร้อมเล่นแล้ว Active ${pEntries.length} คน · รอแอดมินเริ่มข้อแรก` : 'สแกน QR Code ด้านล่างเพื่อเข้าร่วมเกมและใส่ชื่อได้เลย!';
+    $('qcSub').textContent = pEntries.length ? `พร้อมเล่นแล้ว ${pEntries.length} คน · รอแอดมินเริ่มข้อแรก` : 'สแกน QR Code ด้านล่างเพื่อเข้าร่วมเกมและใส่ชื่อได้เลย!';
   }
   else if (quiz.buzz.length) {
     $('qcIcon').textContent = '🔔';
@@ -1396,7 +1396,10 @@ window.setMode = m => {
   if (m === mode) return;
   if (mode === 'quiz' && quiz.adminId && quiz.adminId !== cid && !confirm('กลับโหมดคาราโอเกะ? เกมทายเพลงจะหยุดสำหรับทุกคนในห้อง')) return;
   const u = { mode: m };
-  if (m === 'quiz') u['quiz/adminId'] = cid;
+  if (m === 'quiz') {
+    u['quiz/adminId'] = cid;
+    u[`quiz/players/${cid}`] = null; // ลบชื่อแอดมินออกจากรายชื่อผู้เล่นทันทีที่ตั้งเป็นแอดมิน
+  }
   guard(update(ref(db, `rooms/${roomId}`), u));
 };
 
@@ -1473,7 +1476,6 @@ function renderQuizPhone() {
       : (isAdmin ? `<button onclick="quizJudge('${esc(b.id)}',1)" class="px-2.5 py-1 bg-emerald-600 rounded-lg text-xs">✓ +1</button><button onclick="quizJudge('${esc(b.id)}',-1)" class="px-2.5 py-1 bg-rose-600 rounded-lg text-xs">✕ ผิด</button>` : '')}</div>`).join('')
     : '<p class="text-xs text-slate-600">ยังไม่มีคนกด</p>';
   
-  // ตารางคะแนนฝั่งแอดมิน เพิ่มปุ่ม + และ - ให้ปรับคะแนนเองได้
   $('qScores').innerHTML = teamBoard() + (quiz.scores.length ? quiz.scores.map((p, i) => `<div class="flex items-center justify-between p-2 rounded-xl bg-slate-900 border border-slate-800 text-sm"><span class="truncate mr-2"><span class="text-slate-400 mr-1">${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'}</span> ${teamTag(p.id)}${esc(p.name)}</span><div class="flex items-center gap-1.5 shrink-0"><span class="font-black text-xl text-amber-300 mr-2">${p.score}</span>${isAdmin ? `<button onclick="adminAdjustScore('${p.id}', -1)" class="w-7 h-7 bg-rose-500/20 text-rose-300 rounded-lg font-bold text-xs hover:bg-rose-500/40">-</button><button onclick="adminAdjustScore('${p.id}', 1)" class="w-7 h-7 bg-emerald-500/20 text-emerald-300 rounded-lg font-bold text-xs hover:bg-emerald-500/40">+</button>` : ''}</div></div>`).join('') : '<p class="text-xs text-slate-600">ยังไม่มีคะแนน</p>');
 }
 
@@ -1547,7 +1549,6 @@ window.quizNext = async () => {
   startRound(item, item.id);
 };
 
-// ฟังก์ชันข้ามเพลง (Skip)
 window.quizSkip = async () => {
   if (quiz.adminId !== cid) return;
   toast('กำลังข้ามเพลงนี้...');
@@ -1583,13 +1584,16 @@ function registerPlayer(isAdmin) {
   const n = ($('nameInput').value || '').trim();
   if (!n) return;
   registeredName = n;
-  // ส่งสัญญาณ Active (Heartbeat) อัปเดต timestamp ทุกครั้งที่เรียก
   guard(set(ref(db, `rooms/${roomId}/quiz/players/${cid}`), { name: n, lastSeen: serverTimestamp() }));
 }
 
-// ยิง Heartbeat ทุกๆ 10 วินาที เพื่อบอกว่ามือถือยังเปิดหน้าเว็บอยู่จริงๆ
+// ยิง Heartbeat ทุกๆ 10 วินาที เฉพาะผู้เล่นทั่วไป (ไม่รวมแอดมิน)
 setInterval(() => {
-  if (isMain) return;
+  if (isMain || mode !== 'quiz') return;
+  if (quiz.adminId === cid) {
+    guard(remove(ref(db, `rooms/${roomId}/quiz/players/${cid}`)));
+    return;
+  }
   const n = ($('nameInput').value || '').trim();
   if (n) {
     guard(update(ref(db, `rooms/${roomId}/quiz/players/${cid}`), { name: n, lastSeen: serverTimestamp() }));
@@ -1600,10 +1604,10 @@ window.chooseTeam = k => guard(set(ref(db, `rooms/${roomId}/quiz/teams/${cid}`),
 window.teamShuffle = () => {
   if (quiz.adminId !== cid) return;
   const ids = Object.keys(quiz.players).sort(() => Math.random() - 0.5);
-  if (!ids.length) return toast('ยังไม่มีผู้เล่นActiveในห้อง');
+  if (!ids.length) return toast('ยังไม่มีผู้เล่นในห้อง');
   const map = {}; ids.forEach((id, i) => { map[id] = i % 2 ? 'B' : 'A'; });
   guard(update(ref(db, `rooms/${roomId}/quiz`), { teams: map }));
-  toast(`แบ่งทีมให้ผู้เล่น Active ${ids.length} คนแล้ว`);
+  toast(`แบ่งทีมให้ผู้เล่น ${ids.length} คนแล้ว`);
 };
 
 let shareDataUrl = '';
