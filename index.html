@@ -575,40 +575,65 @@ onValue(reactionRef, snap => {
 let chartPool = [], autoUsed = new Set(), autoTimer = null, autoSkipTimer = null, autoToastShown = false;
 const CATS = [
   { k: 'top', label: '🔥 ท็อปชาร์ต' },
+  { k: 'kpop', label: '🇰🇷 K-POP', q: 'K-pop เพลงเกาหลี ฮิต' }, { k: 'kpop10', label: '🇰🇷 K-POP ยุคเก่า', q: 'K-pop เพลงเกาหลี ยุค 2010 ฮิต' },
+  { k: 'jpop', label: '🇯🇵 J-POP', q: 'J-pop เพลงญี่ปุ่น ฮิต' }, { k: 'anime', label: '🎌 อนิเมะ', q: 'เพลงอนิเมะ ฮิต anime songs' },
+  { k: 'cpop', label: '🇨🇳 จีน/ไต้หวัน', q: 'เพลงจีน ฮิต Mandopop' }, { k: 'uspop', label: '🇺🇸 สากลป๊อป', q: 'English pop hits US UK' },
+  { k: 'rnb', label: 'R&B / โซล', q: 'R&B soul hits' }, { k: 'edm', label: 'EDM', q: 'EDM dance hits' }, { k: 'latin', label: 'ลาติน', q: 'Latin pop reggaeton hits' },
+  { k: 'tiktok', label: '📱 ฮิตในติ๊กตอก', q: 'เพลงฮิต TikTok ไทย ล่าสุด' }, { k: 'drama', label: '📺 เพลงประกอบละคร', q: 'เพลงประกอบละคร ฮิต' },
+  { k: 'love', label: '💕 เพลงรัก', q: 'เพลงรัก ไทย โรแมนติก ฮิต' }, { k: 'acoustic', label: '🎸 อะคูสติก', q: 'เพลงอะคูสติก ไทย ฮิต' },
   { k: 'd80', label: 'ยุค 80', q: 'เพลงฮิต ยุค 80 ไทย' }, { k: 'd90', label: 'ยุค 90', q: 'เพลงฮิต ยุค 90 ไทย' },
   { k: 'd00', label: 'ยุค 2000', q: 'เพลงฮิต ยุค 2000 ไทย' }, { k: 'd10', label: 'ยุค 2010', q: 'เพลงฮิต ยุค 2010 ไทย' },
   { k: 'd20', label: 'ยุค 2020', q: 'เพลงฮิต 2020 ไทย ล่าสุด' },
-  { k: 'lt', label: 'ลูกทุ่ง', q: 'เพลงลูกทุ่ง ฮิต' }, { k: 'pop', label: 'ป๊อป', q: 'เพลงป๊อป ไทย ฮิต' },
+  { k: 'lt', label: 'ลูกทุ่ง', q: 'เพลงลูกทุ่ง ฮิต' }, { k: 'molam', label: 'หมอลำ/อีสาน', q: 'หมอลำ เพลงอีสาน ฮิต' }, { k: 'pop', label: 'ป๊อป', q: 'เพลงป๊อป ไทย ฮิต' },
   { k: 'rock', label: 'ร็อก', q: 'เพลงร็อก ไทย ฮิต' }, { k: 'hip', label: 'ฮิปฮอป', q: 'เพลงฮิปฮอป แร็พ ไทย ฮิต' },
   { k: 'slow', label: 'เพลงช้า', q: 'เพลงช้า เพลงเศร้า ไทย ฮิต' }, { k: 'dance', label: 'เพลงสนุก', q: 'เพลงสนุก เต้น ปาร์ตี้ ไทย' },
   { k: 'indie', label: 'อินดี้', q: 'เพลงอินดี้ ไทย ฮิต' }, { k: 'int', label: 'สากล', q: 'เพลงสากล ฮิต' },
   { k: 'old', label: 'เพลงเก่า/ลูกกรุง', q: 'เพลงเก่า ลูกกรุง ฮิต' }
 ];
 const catMem = {};
-const readCatCache = k => { try { const c = JSON.parse(localStorage.getItem('kcat:' + k) || 'null'); return c && Date.now() - c.t < 3 * 86400000 ? c.items : null; } catch { return null; } };
-const writeCatCache = (k, items) => { try { localStorage.setItem('kcat:' + k, JSON.stringify({ t: Date.now(), items })); } catch {} };
-async function fetchCategory(k) {      // ท็อปชาร์ต = เพลงมาแรงหมวดดนตรี / หมวดอื่น = เพลย์ลิสต์ยอดนิยมที่ค้นเจอบน YouTube (เก็บในเครื่อง 3 วันเพื่อประหยัดโควตา)
-  if (k !== 'top') { const c = readCatCache(k); if (c && c.length) return c; }
+const CAT_TTL = 7 * 86400000;      // โหลดชาร์ตใหม่สัปดาห์ละครั้งก็พอ ถ้าใครโหลดไว้ใน Firebase แล้วทุกเครื่องใช้ร่วมกัน
+const readCatRaw = k => { try { return JSON.parse(localStorage.getItem('kcat:' + k) || 'null'); } catch { return null; } };
+const writeCatCache = (k, items, t) => { try { localStorage.setItem('kcat:' + k, JSON.stringify({ t: t || Date.now(), items })); } catch {} };
+async function readSharedCat(k) {
+  try {
+    const snap = await Promise.race([get(ref(db, `charts/${k}_${CHART_REGION}`)), new Promise((_, rej) => setTimeout(rej, 4000))]);
+    const v = snap.val(); return v && v.d ? { t: v.t, items: JSON.parse(v.d) } : null;
+  } catch { return null; }
+}
+async function fetchCategory(k, force) {      // ท็อปชาร์ต = เพลงมาแรงหมวดดนตรี / หมวดอื่น = เพลย์ลิสต์ยอดนิยมที่ค้นเจอบน YouTube
+  const okE = e => e && e.items && e.items.length, fresh = e => okE(e) && Date.now() - e.t < CAT_TTL;
+  const loc = readCatRaw(k); let stale = okE(loc) ? loc : null;
+  if (!force) {
+    if (fresh(loc)) return loc.items;
+    const sh = await readSharedCat(k);
+    if (fresh(sh)) { writeCatCache(k, sh.items, sh.t); return sh.items; }
+    if (okE(sh) && (!stale || sh.t > stale.t)) stale = sh;
+  }
   const mk = v => ({ vid: v.id, title: dec(v.snippet.title), channel: dec(v.snippet.channelTitle), dur: isoSec(v.contentDetails.duration) });
   let songs = [];
-  if (k === 'top') {
-    const j = await yt('videos', { part: 'snippet,contentDetails,status', chart: 'mostPopular', videoCategoryId: '10', regionCode: CHART_REGION, maxResults: 50 });
-    songs = (j.items || []).filter(i => i.status && i.status.embeddable).map(mk);
-  } else {
-    const cat = CATS.find(c => c.k === k);
-    const sr = await yt('search', { part: 'snippet', type: 'playlist', maxResults: 3, q: cat.q + ' playlist', relevanceLanguage: 'th', regionCode: CHART_REGION });
-    const ids = [];
-    for (const it of (sr.items || []).slice(0, 2)) {
-      try { const pj = await yt('playlistItems', { part: 'contentDetails', playlistId: it.id.playlistId, maxResults: 50 }); (pj.items || []).forEach(x => ids.push(x.contentDetails.videoId)); } catch {}
+  try {
+    if (k === 'top') {
+      const j = await yt('videos', { part: 'snippet,contentDetails,status', chart: 'mostPopular', videoCategoryId: '10', regionCode: CHART_REGION, maxResults: 50 }, { force });
+      songs = (j.items || []).filter(i => i.status && i.status.embeddable).map(mk);
+    } else {
+      const cat = CATS.find(c => c.k === k);
+      const sr = await yt('search', { part: 'snippet', type: 'playlist', maxResults: 3, q: cat.q + ' playlist', relevanceLanguage: 'th', regionCode: CHART_REGION }, { force });
+      const ids = [];
+      for (const it of (sr.items || []).slice(0, 2)) {
+        try { const pj = await yt('playlistItems', { part: 'contentDetails', playlistId: it.id.playlistId, maxResults: 50 }, { force }); (pj.items || []).forEach(x => ids.push(x.contentDetails.videoId)); } catch {}
+      }
+      const uniq = [...new Set(ids)].slice(0, 100);
+      for (let i = 0; i < uniq.length; i += 50) {
+        const vj = await yt('videos', { part: 'snippet,contentDetails,status', id: uniq.slice(i, i + 50).join(',') });
+        (vj.items || []).forEach(v => { if (v.status && v.status.embeddable) songs.push(mk(v)); });
+      }
+      songs = songs.filter(x => x.dur >= 60 && x.dur <= 600);
     }
-    const uniq = [...new Set(ids)].slice(0, 100);
-    for (let i = 0; i < uniq.length; i += 50) {
-      const vj = await yt('videos', { part: 'snippet,contentDetails,status', id: uniq.slice(i, i + 50).join(',') });
-      (vj.items || []).forEach(v => { if (v.status && v.status.embeddable) songs.push(mk(v)); });
-    }
-    songs = songs.filter(x => x.dur >= 60 && x.dur <= 600);
-    if (songs.length) writeCatCache(k, songs);
-  }
+  } catch (e) { if (stale) return stale.items; throw e; }
+  if (songs.length) {
+    const t = Date.now(); writeCatCache(k, songs, t);
+    set(ref(db, `charts/${k}_${CHART_REGION}`), { t, d: JSON.stringify(songs) }).catch(() => {});      // แชร์ให้ทุกเครื่อง/ทุกห้อง
+  } else if (stale) return stale.items;
   return songs;
 }
 async function getCategoryPool(k) { if (!catMem[k]) catMem[k] = await fetchCategory(k); return catMem[k].filter(x => x.dur >= 100 && x.dur <= 480); }
@@ -754,6 +779,9 @@ function preloadNext() {      // โหลดเพลง/ข้อถัดไ�
   if (mode === 'quiz') return;      // ทายเพลง: ไม่โหลดตัวสำรอง เพราะทีวีบางรุ่นจะพักเพลงหลักทันทีที่วิดีโอที่สองเริ่มเล่น (เพลงเลยหยุดเองหลังขึ้นราว 3 วิ)
   if (!currentSong || !player) return;
   if (player) { try { const st = player.getPlayerState(); if (st !== 1 && st !== 2) return; } catch { return; } }
+  let rem = Infinity; try { const d = player.getDuration(), t = player.getCurrentTime(); if (d > 0) rem = d - t; } catch {}
+  clearTimeout(preTimer);
+  if (rem > 25) { preTimer = setTimeout(preloadNext, isFinite(rem) ? Math.max(1500, (rem - 25) * 1000) : 8000); return; }      // โหลดตัวสำรองเฉพาะช่วง 25 วินาทีสุดท้าย (ตอนเพิ่มเพลงกลางเพลง จะไม่รบกวนเพลงที่กำลังเล่น)
   const id = nextTargetId();
   if (!id) return dropPre();
   if (id === preId) return;
@@ -775,10 +803,20 @@ function swapToPre(my, startSec) {      // ตัวสำรองที่โ�
   try { player.seekTo(startSec || 0, true); player.unMute(); player.setVolume(ui.volume); player.playVideo(); applyCC(); } catch {}
   ensurePlaying(my);
 }
-let resumeTries = 0;
+let resumeTries = 0, errSkips = 0, loadCount = 0, preTimer = null;
 function wantPlaying() {      // ตอนนี้เพลงหลัก "ควรกำลังเล่นอยู่" ไหม (ใช้กันกรณีเบราว์เซอร์/ทีวีพักเพลงเอง)
   if (mode === 'quiz') { const r = quiz.round; return !!r && !(qType(r) === 'lyric' && r.status !== 'revealed') && !quiz.buzz.length && !summaryShown && !quiz.game.over; }
   return !!(currentSong && !paused);
+}
+async function quizAutoReplace(n) {
+  const r = quiz.round;
+  if (!isMain || !r || r.n !== n || r.status !== 'playing') return;
+  if (errSkips >= 3) return toast('หลายเพลงติดกันเล่นไม่ได้ ให้แอดมินกด ⏭ ข้ามเพลง');
+  errSkips++;
+  let item = quiz.prep[0];
+  if (!item) { try { item = await randomQuizItem([r.vid]); } catch {} }
+  if (!item || !quiz.round || quiz.round.n !== n) return;
+  startRound(item, item.id, true);
 }
 function ytEvents() {
   return {
@@ -788,7 +826,7 @@ function ytEvents() {
     onStateChange: e => {
       if (e.target === pre) { if (e.data === 1 && !preReady) { preReady = true; try { e.target.pauseVideo(); } catch {} } return; }
       if (e.data === 1 || e.data === 2) { showLoading(false); clearTimeout(loadTimer); }
-      if (e.data === 1) resumeTries = 0;
+      if (e.data === 1) { resumeTries = 0; errSkips = 0; }
       if (e.data === 2 && e.target === player && wantPlaying() && resumeTries < 5) {      // ถูกพักโดยไม่ได้ตั้งใจ → สั่งเล่นต่อเอง
         resumeTries++;
         setTimeout(() => { try { if (e.target === player && player.getPlayerState() === 2 && wantPlaying()) player.playVideo(); } catch {} }, 500);
@@ -802,13 +840,20 @@ function ytEvents() {
     onError: e => {
       if (e.target === pre) { dropPre(); return; }
       showLoading(false);
-      if (mode === 'quiz') return toast('เพลงนี้เล่นไม่ได้ ให้แอดมินสุ่มเพลงใหม่');
+      if (mode === 'quiz') {      // ทายเพลง: เพลงเล่นไม่ได้ (ถูกบล็อก/ลบแล้ว) → เปลี่ยนเพลงให้เองไม่นับเป็นข้อ และลบออกจากคลัง
+        const r = quiz.round; if (!r) return;
+        toast('เพลงนี้เล่นไม่ได้ กำลังเปลี่ยนเพลงให้อัตโนมัติ');
+        try { if (libCache.q) delete libCache.q.items[r.vid]; remove(ref(db, 'lib/q/' + r.vid)).catch(() => {}); } catch {}
+        const n = r.n; setTimeout(() => quizAutoReplace(n), 1500);
+        return;
+      }
       const tk = playToken; toast('เพลงนี้เล่นไม่ได้ ข้ามไปเพลงถัดไป');
       setTimeout(() => tk === playToken && skipSong(), 2000);
     }
   };
 }
 function makeOrLoad(videoId, start, my) {
+  if (player && ++loadCount >= 8) { loadCount = 0; try { player.destroy(); } catch {} player = null; }      // สร้างตัวเล่นใหม่ทุก 8 เพลง กันอุปกรณ์ค้างสะสม
   if (!player) {
     $('playerContainer').innerHTML = '<div id="ytTarget" class="w-full h-full"></div>';
     player = new YT.Player('ytTarget', {
@@ -1341,7 +1386,17 @@ async function libFind(kind, q, limit = 12) {      // ทุกคำที่�
   if (!toks.length) return [];
   const items = await loadLib(kind);
   return Object.entries(items).filter(([, v]) => v && v.title && toks.every(t => (v.title + ' ' + (v.channel || '')).toLowerCase().includes(t)))
-    .sort((a, b) => (b[1].n || 0) - (a[1].n || 0) || (b[1].ts || 0) - (a[1].ts || 0)).slice(0, limit).map(([vid, v]) => ({ vid, ...v }));
+    .sort((a, b) => (b[1].n || 0) - (a[1].n || 0) || ((b[1].ts || b[1].st) || 0) - ((a[1].ts || a[1].st) || 0)).slice(0, limit).map(([vid, v]) => ({ vid, ...v }));
+}
+function saveSearchLib(kind, arr) {      // เก็บผลค้นหาทั้งหมดเข้าคลัง (ไม่ทับจำนวนครั้งที่เคยเลือก)
+  if (!arr || !arr.length) return;
+  const upd = {}, c = libCache[kind], now = Date.now();
+  arr.forEach(e => {
+    if (!e || !e.vid || !e.title) return;
+    upd[e.vid + '/title'] = e.title; upd[e.vid + '/channel'] = e.channel || ''; upd[e.vid + '/st'] = now; if (e.dur) upd[e.vid + '/dur'] = e.dur;
+    if (c && !c.items[e.vid]) c.items[e.vid] = { title: e.title, channel: e.channel || '', st: now, ...(e.dur ? { dur: e.dur } : {}) };
+  });
+  if (Object.keys(upd).length) update(ref(db, 'lib/' + kind), upd).catch(() => {});
 }
 function ytErr(e) {
   if (e.code === 'nokey') return 'ยังไม่ได้ตั้งค่า YouTube API Key — ตอนนี้วางลิงก์ YouTube ในช่องค้นหาเพื่อเพิ่มเพลงได้';
@@ -1359,7 +1414,7 @@ function rowHtml(it, extra = '') {
   known.set(it.vid, it);
   return `<div class="flex items-center gap-3 p-2 rounded-xl bg-slate-900 border border-slate-800">
     <img src="${thumb(it.vid)}" loading="lazy" class="w-24 aspect-video object-cover rounded-lg shrink-0 bg-slate-800">
-    <div class="min-w-0 flex-1"><p class="text-xs font-medium line-clamp-2">${esc(it.title)}</p><p class="text-[10px] text-slate-400 truncate">${it.fromLib ? '⭐ เคยเลือก · ' : ''}${esc(it.channel)}</p></div>
+    <div class="min-w-0 flex-1"><p class="text-xs font-medium line-clamp-2">${esc(it.title)}</p><p class="text-[10px] text-slate-400 truncate">${it.fromLib === 'chosen' ? '⭐ เคยเลือก · ' : it.fromLib ? '📚 เคยค้นเจอ · ' : ''}${esc(it.channel)}</p></div>
     <div class="flex flex-col gap-1 shrink-0">${addBtn(it.vid)}${extra}</div></div>`;
 }
 let searchStored = false;
@@ -1387,14 +1442,14 @@ window.doSearch = async force => {
   if (!force) {      // เคยเลือก/เคยค้นแล้ว → โชว์ผลเก่าก่อน ไม่ยิง API
     const [mine, cached] = await Promise.all([libFind('k', raw), yt('search', params, { cacheOnly: true }).catch(() => null)]);
     const seen = new Set(), out = [];
-    mine.forEach(v => { seen.add(v.vid); out.push({ vid: v.vid, title: v.title, channel: v.channel || '', fromLib: true }); });
+    mine.forEach(v => { seen.add(v.vid); out.push({ vid: v.vid, title: v.title, channel: v.channel || '', fromLib: v.n ? 'chosen' : 'seen' }); });
     ((cached && cached.items) || []).forEach(i => { const vid = i.id && i.id.videoId; if (vid && !seen.has(vid)) { seen.add(vid); out.push({ vid, title: dec(i.snippet.title), channel: dec(i.snippet.channelTitle) }); } });
     if (out.length) { lastSearch = out; searchStored = true; renderSearch(); return; }
   }
   if (!YT_API_KEY) return msg(el, ytErr({ code: 'nokey' }));
   try {
     const j = await yt('search', params, { force });
-    lastSearch = j.items.map(i => ({ vid: i.id.videoId, title: dec(i.snippet.title), channel: dec(i.snippet.channelTitle) })); searchStored = false;
+    lastSearch = j.items.map(i => ({ vid: i.id.videoId, title: dec(i.snippet.title), channel: dec(i.snippet.channelTitle) })); searchStored = false; saveSearchLib('k', lastSearch);
     lastSearch.length ? renderSearch() : msg(el, 'ไม่พบเพลง ลองคำค้นอื่น');
   } catch (e) { msg(el, ytErr(e)); }
 };
@@ -1521,7 +1576,7 @@ const manualPick = new Map();
 window.pickManual = id => { const m = manualPick.get(id); if (m) selectManualQuizSong(id, m.title, m.channel, m.dur); };
 const manualRow = id => { const m = manualPick.get(id); return `<div class="flex items-center gap-2 p-2 bg-slate-950 rounded-xl border border-slate-800">
   <img src="${thumb(id)}" class="w-16 aspect-video object-cover rounded">
-  <div class="min-w-0 flex-1"><p class="text-xs font-medium line-clamp-2">${esc(m.title)}</p><p class="text-[10px] text-slate-400 truncate">${m.lib ? '⭐ เคยเลือก · ' : ''}${esc(m.channel)}</p></div>
+  <div class="min-w-0 flex-1"><p class="text-xs font-medium line-clamp-2">${esc(m.title)}</p><p class="text-[10px] text-slate-400 truncate">${m.lib === 'chosen' ? '⭐ เคยเลือก · ' : m.lib ? '📚 เคยค้นเจอ · ' : ''}${esc(m.channel)}</p></div>
   <div class="flex flex-col gap-1 shrink-0"><button onclick="prepManual('${id}')" class="px-2.5 py-1 bg-pink-600 rounded-lg text-[11px] font-semibold">+ เตรียมไว้</button><button onclick="prepLyric('${id}')" class="px-2.5 py-1 bg-slate-800 rounded-lg text-[11px]">ทายเนื้อเพลง</button><button onclick="pickManual('${id}')" class="px-2.5 py-1 bg-slate-700 rounded-lg text-[11px]">เล่นเลย</button></div></div>`; };
 window.searchManualQuiz = async force => {
   force = force === true;
@@ -1533,7 +1588,7 @@ window.searchManualQuiz = async force => {
     if (!lid && !force) {      // เคยเลือก/เคยค้นแล้ว → โชว์ผลเก่าก่อน ไม่เสียโควตา
       const [mine, cached] = await Promise.all([libFind('q', q), yt('search', params, { cacheOnly: true }).catch(() => null)]);
       const seen = new Set(), rows = [];
-      mine.forEach(v => { seen.add(v.vid); manualPick.set(v.vid, { title: v.title, channel: v.channel || '', dur: v.dur || 0, lib: true }); rows.push(manualRow(v.vid)); });
+      mine.forEach(v => { seen.add(v.vid); manualPick.set(v.vid, { title: v.title, channel: v.channel || '', dur: v.dur || 0, lib: v.n ? 'chosen' : 'seen' }); rows.push(manualRow(v.vid)); });
       const ids = ((cached && cached.items) || []).map(i => i.id && i.id.videoId).filter(x => x && !seen.has(x));
       if (ids.length) {
         try { const j2 = await yt('videos', { part: 'snippet,contentDetails', id: ids.join(',') }); (j2.items || []).forEach(i => { manualPick.set(i.id, { title: dec(i.snippet.title), channel: dec(i.snippet.channelTitle), dur: isoSec(i.contentDetails.duration) }); rows.push(manualRow(i.id)); }); } catch {}
@@ -1546,7 +1601,10 @@ window.searchManualQuiz = async force => {
     else { const j = await yt('search', params, { force }); ids = (j.items || []).map(i => i.id.videoId); }
     if (!ids.length) { el.innerHTML = '<p class="text-slate-400 text-center py-2">ไม่พบเพลง</p>'; return; }
     const j2 = await yt('videos', { part: 'snippet,contentDetails', id: ids.join(',') });
-    el.innerHTML = (j2.items || []).map(i => { manualPick.set(i.id, { title: dec(i.snippet.title), channel: dec(i.snippet.channelTitle), dur: isoSec(i.contentDetails.duration) }); return manualRow(i.id); }).join('') || '<p class="text-slate-400 text-center py-2">ไม่พบเพลง</p>';
+    const found = (j2.items || []).map(i => ({ vid: i.id, title: dec(i.snippet.title), channel: dec(i.snippet.channelTitle), dur: isoSec(i.contentDetails.duration) }));
+    found.forEach(x => manualPick.set(x.vid, { title: x.title, channel: x.channel, dur: x.dur }));
+    saveSearchLib('q', found);
+    el.innerHTML = found.map(x => manualRow(x.vid)).join('') || '<p class="text-slate-400 text-center py-2">ไม่พบเพลง</p>';
   } catch (e) { el.innerHTML = `<p class="text-rose-400 text-center py-2">${esc(ytErr(e))}</p>`; }
 };
 
