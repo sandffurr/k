@@ -751,7 +751,8 @@ function nextTargetId() {
 }
 function preloadNext() {      // โหลดเพลง/ข้อถัดไปไว้ในตัวเล่นสำรอง (ปิดเสียง) พอมีข้อมูลแล้วหยุดไว้ ให้กดข้ามหรือจบเพลงแล้วต่อทันที
   if (!isMain || !started || !(window.YT && YT.Player)) return;
-  if (mode === 'quiz') { if (quiz.game.over) return; } else if (!currentSong || !player) return;
+  if (mode === 'quiz') return;      // ทายเพลง: ไม่โหลดตัวสำรอง เพราะทีวีบางรุ่นจะพักเพลงหลักทันทีที่วิดีโอที่สองเริ่มเล่น (เพลงเลยหยุดเองหลังขึ้นราว 3 วิ)
+  if (!currentSong || !player) return;
   if (player) { try { const st = player.getPlayerState(); if (st !== 1 && st !== 2) return; } catch { return; } }
   const id = nextTargetId();
   if (!id) return dropPre();
@@ -774,6 +775,11 @@ function swapToPre(my, startSec) {      // ตัวสำรองที่โ�
   try { player.seekTo(startSec || 0, true); player.unMute(); player.setVolume(ui.volume); player.playVideo(); applyCC(); } catch {}
   ensurePlaying(my);
 }
+let resumeTries = 0;
+function wantPlaying() {      // ตอนนี้เพลงหลัก "ควรกำลังเล่นอยู่" ไหม (ใช้กันกรณีเบราว์เซอร์/ทีวีพักเพลงเอง)
+  if (mode === 'quiz') { const r = quiz.round; return !!r && !(qType(r) === 'lyric' && r.status !== 'revealed') && !quiz.buzz.length && !summaryShown && !quiz.game.over; }
+  return !!(currentSong && !paused);
+}
 function ytEvents() {
   return {
     onReady: e => {
@@ -782,6 +788,11 @@ function ytEvents() {
     onStateChange: e => {
       if (e.target === pre) { if (e.data === 1 && !preReady) { preReady = true; try { e.target.pauseVideo(); } catch {} } return; }
       if (e.data === 1 || e.data === 2) { showLoading(false); clearTimeout(loadTimer); }
+      if (e.data === 1) resumeTries = 0;
+      if (e.data === 2 && e.target === player && wantPlaying() && resumeTries < 5) {      // ถูกพักโดยไม่ได้ตั้งใจ → สั่งเล่นต่อเอง
+        resumeTries++;
+        setTimeout(() => { try { if (e.target === player && player.getPlayerState() === 2 && wantPlaying()) player.playVideo(); } catch {} }, 500);
+      }
       if (e.data === 1) { applyCC(); if (!needSound) $('tapPlay').classList.add('hidden'); setTimeout(preloadNext, 1500); if (mode === 'quiz') armQuizTimer(); }
       if (e.data === 0) {
         if (mode === 'quiz') { const r = quiz.round; if (r && r.status !== 'revealed') { try { player.seekTo(r.start, true); player.playVideo(); } catch {} } }
@@ -1121,9 +1132,37 @@ const GITHUB_AUDIO_BASE = 'https://raw.githubusercontent.com/sandffurr/karaokepa
 const SFX_FILES = { clap: 'Crowd Cheering.mp3', horn: 'Horn.mp3', drum: 'Drum.mp3', whistle: 'Wolf Whistle.mp3', buzz: 'Buzzer.mp3', correct: 'Correct.mp3', fail: 'Fail.mp3', ding: 'Button.mp3' };
 const sfxCache = {}, SFX = {};
 const sfxUrl = k => GITHUB_AUDIO_BASE + encodeURIComponent(SFX_FILES[k]);
+/* เล่นเอฟเฟกต์ผ่าน Web Audio (ไม่แย่งเสียงกับ YouTube) ถ้าเบราว์เซอร์ทีวียังไม่อนุญาตค่อยถอยไปใช้ Audio ธรรมดา
+   และเผื่อทีวีบางรุ่นที่ "พักเพลง" ตอนมีเสียงอื่นเข้ามา จะสั่งเล่นเพลงต่อให้เอง */
+let sfxCtx = null; const sfxBuf = {};
+const sfxCtxGet = () => { try { return sfxCtx || (sfxCtx = new (window.AudioContext || window.webkitAudioContext)()); } catch { return null; } };
+if (isMain) {
+  Object.keys(SFX_FILES).forEach(k => { const a = new Audio(sfxUrl(k)); a.preload = 'auto'; sfxCache[k] = a; });
+  const wake = () => { const c = sfxCtxGet(); if (c && c.state === 'suspended') c.resume().catch(() => {}); };
+  ['pointerdown', 'keydown', 'touchstart'].forEach(ev => document.addEventListener(ev, wake, { passive: true }));
+  Object.keys(SFX_FILES).forEach(k => {
+    const c = sfxCtxGet(); if (!c) return;
+    fetch(sfxUrl(k)).then(r => r.arrayBuffer()).then(buf => new Promise((res, rej) => c.decodeAudioData(buf, res, rej))).then(b => { sfxBuf[k] = b; }).catch(() => {});
+  });
+}
+const sfxWasPlaying = () => { try { return !!(player && player.getPlayerState && player.getPlayerState() === 1); } catch { return false; } };
+const sfxShouldPlay = () => wantPlaying();
+function sfxPlayNow(k) {
+  const c = sfxCtx;
+  if (c && c.state === 'running' && sfxBuf[k]) {
+    const s = c.createBufferSource(), g = c.createGain();
+    s.buffer = sfxBuf[k]; g.gain.value = Math.max(0, Math.min(1, ui.volume / 100));
+    s.connect(g); g.connect(c.destination); s.start(0); return;
+  }
+  if (c && c.state === 'suspended') c.resume().catch(() => {});
+  const a = sfxCache[k] || (sfxCache[k] = new Audio(sfxUrl(k))); a.currentTime = 0; a.volume = Math.max(0, Math.min(1, ui.volume / 100)); a.play().catch(() => {});
+}
 Object.keys(SFX_FILES).forEach(k => {
-  if (isMain) { const a = new Audio(sfxUrl(k)); a.preload = 'auto'; sfxCache[k] = a; }
-  SFX[k] = () => { const a = sfxCache[k] || (sfxCache[k] = new Audio(sfxUrl(k))); a.currentTime = 0; a.volume = Math.max(0, Math.min(1, ui.volume / 100)); a.play().catch(() => {}); };
+  SFX[k] = () => {
+    const was = sfxWasPlaying();
+    sfxPlayNow(k);
+    if (was) [150, 500, 1200].forEach(ms => setTimeout(() => { try { if (player && player.getPlayerState && player.getPlayerState() === 2 && sfxShouldPlay()) player.playVideo(); } catch {} }, ms));
+  };
 });
 const SFX_EMOJI = { clap: '👏', horn: '📯', drum: '🥁', whistle: '🎉', buzz: '🔔', correct: '✅', fail: '❌', ding: '🔔' };
 
@@ -1228,12 +1267,81 @@ window.addEventListener('scroll', () => {
   closeInlineQr();
 }, { passive: true });
 
-async function yt(path, q) {
+/* ======= แคชผลค้นหา YouTube (ประหยัดโควตา: search 1 ครั้ง = 100 หน่วย จาก 10,000 ต่อวัน) =======
+   ชั้นที่ 1 หน่วยความจำ → ชั้นที่ 2 เครื่องนี้ (localStorage) → ชั้นที่ 3 Firebase ที่ทุกเครื่อง/ทุกห้องใช้ร่วมกัน → สุดท้ายค่อยยิง API
+   ถ้าโควตาหมดแล้ว จะใช้ผลเก่าที่เคยเก็บไว้แทน (แม้หมดอายุ) */
+const YT_TTL = { search: 7 * 86400000, videos: 30 * 86400000, playlistItems: 3 * 86400000 };
+const ytMem = new Map();
+const ytHash = s => { let h1 = 0xdeadbeef, h2 = 0x41c6ce57; for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); } h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909); h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909); return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36); };
+const ytKey = (path, q) => ytHash(path + '|' + Object.keys(q).sort().map(k => k + '=' + String(q[k]).toLowerCase().trim().replace(/\s+/g, ' ')).join('&'));
+const ytSlim = j => ({ items: (j.items || []).map(i => { const o = { id: i.id }; if (i.snippet) o.snippet = { title: i.snippet.title, channelTitle: i.snippet.channelTitle }; if (i.contentDetails) o.contentDetails = i.contentDetails.duration ? { duration: i.contentDetails.duration } : { videoId: i.contentDetails.videoId }; if (i.status) o.status = { embeddable: i.status.embeddable }; return o; }) });
+function ytLocalGet(k) { try { return JSON.parse(localStorage.getItem('kyt:' + k) || 'null'); } catch { return null; } }
+function ytLocalSet(k, e) {
+  const s = JSON.stringify(e);
+  try { localStorage.setItem('kyt:' + k, s); } catch {
+    try {      // เต็ม: ลบของเก่าสุดออกครึ่งหนึ่งแล้วลองใหม่
+      const all = Object.keys(localStorage).filter(x => x.startsWith('kyt:')).map(x => { try { return [x, JSON.parse(localStorage.getItem(x)).t || 0]; } catch { return [x, 0]; } }).sort((a, b) => a[1] - b[1]);
+      all.slice(0, Math.ceil(all.length / 2)).forEach(([x]) => localStorage.removeItem(x));
+      localStorage.setItem('kyt:' + k, s);
+    } catch {}
+  }
+}
+async function ytSharedGet(k) {
+  try {
+    const snap = await Promise.race([get(ref(db, 'ytcache/' + k)), new Promise((_, rej) => setTimeout(rej, 3500))]);
+    const v = snap.val(); return v && v.d ? { t: v.t, d: JSON.parse(v.d) } : null;
+  } catch { return null; }
+}
+async function yt(path, q, opts = {}) {      // opts.cacheOnly = ดูเฉพาะผลที่เก็บไว้ (ไม่เรียก API ไม่สนอายุ) · opts.force = ข้ามแคชแล้วค้นใหม่จริง
+  const k = ytKey(path, q), ttl = q.chart ? 6 * 3600000 : (YT_TTL[path] || 86400000), fresh = e => e && e.d && Date.now() - e.t < ttl;
+  let stale = null;
+  if (opts.cacheOnly) {
+    const m0 = ytMem.get(k); if (m0 && m0.d) return m0.d;
+    const l0 = ytLocalGet(k); if (l0 && l0.d) { ytMem.set(k, l0); return l0.d; }
+    const s0 = await ytSharedGet(k); if (s0 && s0.d) { ytMem.set(k, s0); ytLocalSet(k, s0); return s0.d; }
+    return null;
+  }
   if (!YT_API_KEY) throw { code: 'nokey' };
-  const r = await fetch(`https://www.googleapis.com/youtube/v3/${path}?` + new URLSearchParams({ ...q, key: YT_API_KEY }));
-  const j = await r.json();
-  if (!r.ok) throw { code: (j.error && j.error.errors && j.error.errors[0].reason) || r.status, message: j.error && j.error.message };
-  return j;
+  if (!opts.force) {
+    const m = ytMem.get(k); if (fresh(m)) return m.d; if (m) stale = m;
+    const l = ytLocalGet(k); if (fresh(l)) { ytMem.set(k, l); return l.d; } if (l && !stale) stale = l;
+    const s = await ytSharedGet(k); if (fresh(s)) { ytMem.set(k, s); ytLocalSet(k, s); return s.d; } if (s && !stale) stale = s;
+  }
+  try {
+    const r = await fetch(`https://www.googleapis.com/youtube/v3/${path}?` + new URLSearchParams({ ...q, key: YT_API_KEY }));
+    const j = await r.json();
+    if (!r.ok) throw { code: (j.error && j.error.errors && j.error.errors[0].reason) || r.status, message: j.error && j.error.message };
+    const e = { t: Date.now(), d: ytSlim(j) };
+    ytMem.set(k, e); ytLocalSet(k, e);
+    set(ref(db, 'ytcache/' + k), { t: e.t, d: JSON.stringify(e.d) }).catch(() => {});      // แชร์ให้ทุกเครื่อง
+    return e.d;
+  } catch (err) {
+    if (stale && stale.d && (err.code === 'quotaExceeded' || err.code === 'rateLimitExceeded' || !err.code)) return stale.d;      // โควตาหมด/เน็ตมีปัญหา: ใช้ผลเก่าแทน
+    throw err;
+  }
+}
+/* ======= คลังเพลง: เก็บเพลงที่เคยเลือกเล่น/เคยเตรียมไว้ (lib/k = คาราโอเกะ, lib/q = เกมทายเพลง) ใช้ร่วมกันทุกห้อง ======= */
+const LIB_TTL = 300000, libCache = {};
+async function loadLib(kind) {
+  const c = libCache[kind]; if (c && Date.now() - c.t < LIB_TTL) return c.items;
+  try {
+    const snap = await Promise.race([get(ref(db, 'lib/' + kind)), new Promise((_, rej) => setTimeout(rej, 4000))]);
+    libCache[kind] = { t: Date.now(), items: snap.val() || {} };
+  } catch { if (!libCache[kind]) libCache[kind] = { t: Date.now() - LIB_TTL + 30000, items: {} }; }
+  return libCache[kind].items;
+}
+function saveLib(kind, e) {
+  if (!e || !e.vid || !e.title) return;
+  const rec = { title: e.title, channel: e.channel || '', ts: Date.now() }; if (e.dur) rec.dur = e.dur;
+  const c = libCache[kind], prev = c && c.items[e.vid]; if (c) c.items[e.vid] = { ...rec, n: ((prev && prev.n) || 0) + 1 };
+  runTransaction(ref(db, `lib/${kind}/${e.vid}`), cur => ({ ...rec, n: ((cur && cur.n) || 0) + 1 })).catch(() => {});
+}
+async function libFind(kind, q, limit = 12) {      // ทุกคำที่พิมพ์ต้องอยู่ในชื่อเพลง/ช่อง · เรียงตามจำนวนครั้งที่เคยเลือก
+  const toks = q.toLowerCase().split(/\s+/).filter(t => t && !/^(คาราโอเกะ|karaoke)$/.test(t));
+  if (!toks.length) return [];
+  const items = await loadLib(kind);
+  return Object.entries(items).filter(([, v]) => v && v.title && toks.every(t => (v.title + ' ' + (v.channel || '')).toLowerCase().includes(t)))
+    .sort((a, b) => (b[1].n || 0) - (a[1].n || 0) || (b[1].ts || 0) - (a[1].ts || 0)).slice(0, limit).map(([vid, v]) => ({ vid, ...v }));
 }
 function ytErr(e) {
   if (e.code === 'nokey') return 'ยังไม่ได้ตั้งค่า YouTube API Key — ตอนนี้วางลิงก์ YouTube ในช่องค้นหาเพื่อเพิ่มเพลงได้';
@@ -1251,10 +1359,11 @@ function rowHtml(it, extra = '') {
   known.set(it.vid, it);
   return `<div class="flex items-center gap-3 p-2 rounded-xl bg-slate-900 border border-slate-800">
     <img src="${thumb(it.vid)}" loading="lazy" class="w-24 aspect-video object-cover rounded-lg shrink-0 bg-slate-800">
-    <div class="min-w-0 flex-1"><p class="text-xs font-medium line-clamp-2">${esc(it.title)}</p><p class="text-[10px] text-slate-400 truncate">${esc(it.channel)}</p></div>
+    <div class="min-w-0 flex-1"><p class="text-xs font-medium line-clamp-2">${esc(it.title)}</p><p class="text-[10px] text-slate-400 truncate">${it.fromLib ? '⭐ เคยเลือก · ' : ''}${esc(it.channel)}</p></div>
     <div class="flex flex-col gap-1 shrink-0">${addBtn(it.vid)}${extra}</div></div>`;
 }
-const renderSearch = () => $('pane-search').innerHTML = lastSearch.length ? lastSearch.map(i => rowHtml(i)).join('') : '';
+let searchStored = false;
+const renderSearch = () => { $('pane-search').innerHTML = lastSearch.length ? (searchStored ? '<p class="text-[11px] text-emerald-300 px-1 pb-1">📚 ผลที่เก็บไว้ (ไม่เสียโควตา YouTube)</p>' : '') + lastSearch.map(i => rowHtml(i)).join('') + (searchStored ? '<button onclick="doSearch(true)" class="w-full mt-2 py-3 rounded-2xl bg-slate-800 text-sm font-semibold">🔍 ค้นหาใหม่จาก YouTube</button>' : '') : ''; };
 function chartShell() {      // สร้างแถบหมวดครั้งเดียว แล้วแค่สลับสีปุ่ม (ไม่สร้างใหม่ ตำแหน่งเลื่อนจึงไม่รีเซ็ต)
   if (!$('catBar')) $('pane-chart').innerHTML = '<div id="catBar" class="flex gap-1.5 overflow-x-auto pb-2 -mx-1 px-1">' + CATS.map(c => `<button data-k="${c.k}" onclick="setChartCat('${c.k}')" class="chip !whitespace-nowrap shrink-0">${c.label}</button>`).join('') + '</div><div id="chartList"></div>';
   document.querySelectorAll('#catBar [data-k]').forEach(b => { const on = b.dataset.k === chartCat; b.classList.toggle('!bg-pink-600', on); b.classList.toggle('!text-white', on); });
@@ -1265,18 +1374,27 @@ const renderChart = () => { chartShell(); $('chartList').innerHTML =
   (chartCat === 'top' ? `<a href="https://charts.youtube.com/charts/TopSongs/${CHART_REGION.toLowerCase()}" target="_blank" rel="noopener" class="block text-center text-xs text-pink-400 py-1">ดูชาร์ตเต็มบน YouTube Charts ↗</a>` : '') +
   (chartItems.length ? chartItems.map(i => rowHtml(i, `<button onclick="karaokeFor('${i.vid}')" class="px-2 py-1.5 bg-slate-800 rounded-lg text-[11px]">🎤 หาคาราโอเกะ</button>`)).join('') : '<p class="text-center text-xs text-slate-400 py-8">ไม่พบเพลงในหมวดนี้</p>'); };
 
-window.doSearch = async () => {
+window.doSearch = async force => {
+  force = force === true;
   let q = $('q').value.trim(); if (!q) return;
   tab('search');
   const id = videoId(q);
   if (id) return addByLink(id);
-  const el = $('pane-search');
-  if (!YT_API_KEY) return msg(el, ytErr({ code: 'nokey' }));
+  const el = $('pane-search'), raw = q;
   msg(el, 'กำลังค้นหา...');
   if ($('kar').checked && !/คาราโอเกะ|karaoke/i.test(q)) q += ' คาราโอเกะ';
+  const params = { part: 'snippet', type: 'video', maxResults: 15, videoEmbeddable: 'true', videoSyndicated: 'true', relevanceLanguage: 'th', q };
+  if (!force) {      // เคยเลือก/เคยค้นแล้ว → โชว์ผลเก่าก่อน ไม่ยิง API
+    const [mine, cached] = await Promise.all([libFind('k', raw), yt('search', params, { cacheOnly: true }).catch(() => null)]);
+    const seen = new Set(), out = [];
+    mine.forEach(v => { seen.add(v.vid); out.push({ vid: v.vid, title: v.title, channel: v.channel || '', fromLib: true }); });
+    ((cached && cached.items) || []).forEach(i => { const vid = i.id && i.id.videoId; if (vid && !seen.has(vid)) { seen.add(vid); out.push({ vid, title: dec(i.snippet.title), channel: dec(i.snippet.channelTitle) }); } });
+    if (out.length) { lastSearch = out; searchStored = true; renderSearch(); return; }
+  }
+  if (!YT_API_KEY) return msg(el, ytErr({ code: 'nokey' }));
   try {
-    const j = await yt('search', { part: 'snippet', type: 'video', maxResults: 15, videoEmbeddable: 'true', videoSyndicated: 'true', relevanceLanguage: 'th', q });
-    lastSearch = j.items.map(i => ({ vid: i.id.videoId, title: dec(i.snippet.title), channel: dec(i.snippet.channelTitle) }));
+    const j = await yt('search', params, { force });
+    lastSearch = j.items.map(i => ({ vid: i.id.videoId, title: dec(i.snippet.title), channel: dec(i.snippet.channelTitle) })); searchStored = false;
     lastSearch.length ? renderSearch() : msg(el, 'ไม่พบเพลง ลองคำค้นอื่น');
   } catch (e) { msg(el, ytErr(e)); }
 };
@@ -1291,6 +1409,7 @@ window.setChartCat = k => { chartCat = k; loadChart(); };
 window.karaokeFor = vid => { const it = known.get(vid); if (!it) return; $('q').value = it.title; $('kar').checked = true; doSearch(); };
 
 function pushSong(vid, title) {
+  saveLib('k', { vid, title, channel: (known.get(vid) || {}).channel });
   guard(push(queueRef, { title, url: watchUrl(vid), ts: Date.now(), addedBy: myName(), addedById: cid }));
   addedSet.add(vid); toast($('nameInput').value.trim() ? 'เพิ่ม "' + title + '" เข้าคิวแล้ว' : 'เพิ่มแล้ว · ใส่ชื่อมุมขวาบน เพื่อให้เห็นว่าใครเพิ่มเพลง');
   if (lastSearch.length) renderSearch(); if (chartLoaded) renderChart();
@@ -1402,17 +1521,29 @@ const manualPick = new Map();
 window.pickManual = id => { const m = manualPick.get(id); if (m) selectManualQuizSong(id, m.title, m.channel, m.dur); };
 const manualRow = id => { const m = manualPick.get(id); return `<div class="flex items-center gap-2 p-2 bg-slate-950 rounded-xl border border-slate-800">
   <img src="${thumb(id)}" class="w-16 aspect-video object-cover rounded">
-  <div class="min-w-0 flex-1"><p class="text-xs font-medium line-clamp-2">${esc(m.title)}</p><p class="text-[10px] text-slate-400 truncate">${esc(m.channel)}</p></div>
+  <div class="min-w-0 flex-1"><p class="text-xs font-medium line-clamp-2">${esc(m.title)}</p><p class="text-[10px] text-slate-400 truncate">${m.lib ? '⭐ เคยเลือก · ' : ''}${esc(m.channel)}</p></div>
   <div class="flex flex-col gap-1 shrink-0"><button onclick="prepManual('${id}')" class="px-2.5 py-1 bg-pink-600 rounded-lg text-[11px] font-semibold">+ เตรียมไว้</button><button onclick="prepLyric('${id}')" class="px-2.5 py-1 bg-slate-800 rounded-lg text-[11px]">ทายเนื้อเพลง</button><button onclick="pickManual('${id}')" class="px-2.5 py-1 bg-slate-700 rounded-lg text-[11px]">เล่นเลย</button></div></div>`; };
-window.searchManualQuiz = async () => {
+window.searchManualQuiz = async force => {
+  force = force === true;
   const q = $('quizManualInput').value.trim(), el = $('quizManualResults');
   if (!q) return toast('กรุณาพิมพ์ชื่อเพลงหรือลิงก์');
-  if (!YT_API_KEY) { el.innerHTML = `<p class="text-slate-400 text-center py-2">${esc(ytErr({ code: 'nokey' }))}</p>`; return; }
   el.innerHTML = '<p class="text-slate-400 text-center py-2">กำลังค้นหา...</p>';
+  const lid = videoId(q), params = { part: 'snippet', type: 'video', maxResults: 8, videoEmbeddable: 'true', q };
   try {
-    let ids; const lid = videoId(q);
+    if (!lid && !force) {      // เคยเลือก/เคยค้นแล้ว → โชว์ผลเก่าก่อน ไม่เสียโควตา
+      const [mine, cached] = await Promise.all([libFind('q', q), yt('search', params, { cacheOnly: true }).catch(() => null)]);
+      const seen = new Set(), rows = [];
+      mine.forEach(v => { seen.add(v.vid); manualPick.set(v.vid, { title: v.title, channel: v.channel || '', dur: v.dur || 0, lib: true }); rows.push(manualRow(v.vid)); });
+      const ids = ((cached && cached.items) || []).map(i => i.id && i.id.videoId).filter(x => x && !seen.has(x));
+      if (ids.length) {
+        try { const j2 = await yt('videos', { part: 'snippet,contentDetails', id: ids.join(',') }); (j2.items || []).forEach(i => { manualPick.set(i.id, { title: dec(i.snippet.title), channel: dec(i.snippet.channelTitle), dur: isoSec(i.contentDetails.duration) }); rows.push(manualRow(i.id)); }); } catch {}
+      }
+      if (rows.length) { el.innerHTML = '<p class="text-[11px] text-emerald-300">📚 ผลที่เก็บไว้ (ไม่เสียโควตา YouTube)</p>' + rows.join('') + '<button onclick="searchManualQuiz(true)" class="w-full py-2.5 rounded-xl bg-slate-800 text-xs font-semibold">🔍 ค้นหาใหม่จาก YouTube</button>'; return; }
+    }
+    if (!YT_API_KEY) { el.innerHTML = `<p class="text-slate-400 text-center py-2">${esc(ytErr({ code: 'nokey' }))}</p>`; return; }
+    let ids;
     if (lid) ids = [lid];
-    else { const j = await yt('search', { part: 'snippet', type: 'video', maxResults: 8, videoEmbeddable: 'true', q }); ids = (j.items || []).map(i => i.id.videoId); }
+    else { const j = await yt('search', params, { force }); ids = (j.items || []).map(i => i.id.videoId); }
     if (!ids.length) { el.innerHTML = '<p class="text-slate-400 text-center py-2">ไม่พบเพลง</p>'; return; }
     const j2 = await yt('videos', { part: 'snippet,contentDetails', id: ids.join(',') });
     el.innerHTML = (j2.items || []).map(i => { manualPick.set(i.id, { title: dec(i.snippet.title), channel: dec(i.snippet.channelTitle), dur: isoSec(i.contentDetails.duration) }); return manualRow(i.id); }).join('') || '<p class="text-slate-400 text-center py-2">ไม่พบเพลง</p>';
@@ -1508,6 +1639,7 @@ async function addRandomPrep(n) {
   return c;
 }
 function startRound(p, prepId, keepNo) {
+  saveLib('q', p);
   const start = Math.round((p.dur || 180) * (0.28 + Math.random() * 0.06));      // ประมาณช่วงก่อนฮุก
   const upd = { round: { type: p.type || gameType(), clue: p.clue || '', vid: p.vid, title: p.title, channel: p.channel || '', dur: p.dur || 180, start, status: 'playing', n: Date.now(), no: keepNo && quiz.round ? (quiz.round.no || 1) : ((quiz.round && quiz.round.no) || 0) + 1, limit: qLimit() }, buzz: null };
   if (prepId) upd['prep/' + prepId] = null;
@@ -1539,9 +1671,9 @@ window.quizSkip = async () => {      // ข้ามเพลงนี้ ไป
   startRound(item, item.id, true);
   toast('ข้ามเพลงแล้ว (ไม่นับเป็นข้อ)');
 };
-window.prepManual = id => { const m = manualPick.get(id); if (!m) return; guard(push(prepRef(), { vid: id, title: m.title, channel: m.channel, dur: m.dur, type: gameType(), ts: Date.now() })); toast(`เพิ่มเป็นข้อที่ ${quiz.prep.length + 1} แล้ว`); };
+window.prepManual = id => { const m = manualPick.get(id); if (!m) return; saveLib('q', { vid: id, ...m }); guard(push(prepRef(), { vid: id, title: m.title, channel: m.channel, dur: m.dur, type: gameType(), ts: Date.now() })); toast(`เพิ่มเป็นข้อที่ ${quiz.prep.length + 1} แล้ว`); };
 window.prepLyric = id => {      // ข้อทายจากเนื้อเพลง: แอดมินพิมพ์ท่อนเนื้อร้องเอง (ระบบไม่ดึงเนื้อเพลงให้)
-  const m = manualPick.get(id); if (!m) return;
+  const m = manualPick.get(id); if (!m) return; saveLib('q', { vid: id, ...m });
   const clue = (prompt('พิมพ์ท่อนเนื้อเพลงที่จะให้ทาย (พิมพ์เองสั้น ๆ 1-2 บรรทัด)') || '').trim().slice(0, 140);
   if (!clue) return;
   guard(push(prepRef(), { vid: id, title: m.title, channel: m.channel, dur: m.dur, type: 'lyric', clue, ts: Date.now() }));
