@@ -321,10 +321,10 @@ button:disabled{opacity:.45}
           <p class="text-sm font-semibold text-amber-300">👑 แอดมิน</p>
           <button onclick="setMode('karaoke')" class="chip !py-1.5">🎤 กลับคาราโอเกะ</button>
         </div>
-        <p id="qSecret" class="text-xs text-slate-300 break-words bg-black/30 rounded-xl p-3 leading-relaxed"></p>
+        <div id="qSecret" class="text-xs text-slate-300 break-words bg-black/30 rounded-xl p-3 leading-relaxed space-y-1"></div>
         <div class="flex gap-2">
           <button onclick="quizSwapHint()" class="chip !py-1.5">↔ สลับชื่อเพลง/ศิลปิน</button>
-          <button onclick="quizEditArtist()" class="chip !py-1.5">✎ แก้ศิลปิน</button>
+          <button onclick="quizEditRound()" class="chip !py-1.5">✎ แก้ชื่อเพลง/ศิลปิน</button>
         </div>
         <div class="space-y-2">
           <p class="label">จำนวนข้อ</p>
@@ -381,6 +381,7 @@ button:disabled{opacity:.45}
             <button onclick="quizSkip()" class="py-3.5 rounded-2xl bg-slate-800 text-sky-300 font-bold text-sm">⏭ ข้ามเพลง</button>
           </div>
           <p class="label text-center">⏭ ข้ามเพลง = เปลี่ยนไปเพลงอื่นทันที ไม่นับเป็นข้อที่เล่นไปแล้ว</p>
+          <button onclick="quizPause()" class="w-full py-2.5 rounded-xl bg-slate-800 text-amber-300 text-xs font-semibold">⏸ พักเกม (แสดงหน้าเตรียมบนจอ)</button>
         </div>
 
         <div class="space-y-2.5">
@@ -476,6 +477,37 @@ button:disabled{opacity:.45}
 
 <div id="toast" class="hidden fixed bottom-32 left-1/2 -translate-x-1/2 z-[60] glass text-sm px-5 py-2.5 rounded-full shadow-2xl max-w-[90vw] text-center"></div>
 
+<div id="qChk" class="hidden flex fixed inset-0 z-[60] bg-black/70 items-center justify-center p-3">
+  <div class="w-full max-w-md rounded-3xl bg-slate-900 border border-slate-700 p-4 space-y-3 max-h-[92vh] overflow-y-auto">
+    <div class="flex items-center justify-between gap-2">
+      <p class="text-sm font-bold text-amber-300">🔎 ตรวจเพลงก่อนเริ่ม</p>
+      <p id="qChkCount" class="text-sm font-black text-sky-300 tabular-nums"></p>
+    </div>
+    <div id="qChkInfo" class="text-xs leading-relaxed space-y-1.5 break-words"></div>
+    <div class="grid grid-cols-3 gap-2">
+      <button onclick="quizEditRound()" class="py-3 rounded-xl bg-amber-500 text-slate-900 text-sm font-bold">✎ แก้ไข</button>
+      <button onclick="quizSwapHint()" class="py-3 rounded-xl bg-slate-800 text-sm font-semibold">↔ สลับ</button>
+      <button onclick="quizChkGo()" class="py-3 rounded-xl grad text-sm font-bold">▶ เล่นเลย</button>
+    </div>
+    <button onclick="quizSkip()" class="w-full py-2.5 rounded-xl bg-slate-800 text-sky-300 text-xs font-semibold">⏭ ข้ามเพลงนี้</button>
+    <p class="text-[10px] text-slate-500 text-center">ถ้าไม่กดแก้ไข เพลงจะเริ่มเล่นเองเมื่อนับถึงศูนย์</p>
+  </div>
+</div>
+<div id="qEd" class="hidden flex fixed inset-0 z-[70] bg-black/75 items-center justify-center p-3">
+  <div class="w-full max-w-md rounded-3xl bg-slate-900 border border-slate-700 p-4 space-y-3 max-h-[92vh] overflow-y-auto">
+    <p class="text-sm font-bold text-amber-300">✎ แก้ชื่อเพลง / ศิลปิน</p>
+    <div id="qEdRef" class="text-[11px] text-slate-400 leading-relaxed break-words bg-black/30 rounded-xl p-2.5"></div>
+    <label class="label">🎵 ชื่อเพลง</label>
+    <input id="qEdTitle" maxlength="120" class="w-full bg-slate-800 rounded-xl px-3 py-2.5 text-sm outline-none border border-transparent focus:border-pink-500">
+    <label class="label">🎤 ศิลปิน</label>
+    <input id="qEdArtist" maxlength="120" class="w-full bg-slate-800 rounded-xl px-3 py-2.5 text-sm outline-none border border-transparent focus:border-pink-500">
+    <button onclick="quizEdSwap()" class="w-full py-2 rounded-xl bg-slate-800 text-xs">↔ สลับช่องชื่อเพลง / ศิลปิน</button>
+    <div class="grid grid-cols-2 gap-2">
+      <button onclick="quizEdSave()" class="py-3 rounded-xl grad text-sm font-bold">💾 บันทึก</button>
+      <button onclick="quizEdCancel()" class="py-3 rounded-xl bg-slate-800 text-sm font-semibold">ยกเลิก</button>
+    </div>
+  </div>
+</div>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getDatabase, ref, set, onValue, push, remove, onDisconnect, runTransaction, update, serverTimestamp, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -741,19 +773,28 @@ function loadYT() {
     const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(s);
   });
 }
-function applyCC() {
+let ccTimers = [], ccToastFor = -1;
+function applyCC() {      // คำบรรยาย: ลองซ้ำหลังวิดีโอเริ่มเล่น เพราะ YouTube ยังไม่มีรายการแทร็กตอนเพิ่งโหลด
+  ccTimers.forEach(clearTimeout); ccTimers = [];
   if (!player) return;
-  try {
-    if (ccEnabled) {
-      player.loadModule('captions');
-      player.loadModule('cc');
-      player.setOption('captions', 'track', { languageCode: 'th' });
-      player.setOption('cc', 'track', { languageCode: 'th' });
-    } else {
-      player.unloadModule('captions');
-      player.unloadModule('cc');
-    }
-  } catch {}
+  const run = last => {
+    try {
+      if (!player || !player.loadModule) return;
+      if (!ccEnabled) { player.unloadModule('captions'); player.unloadModule('cc'); return; }
+      player.loadModule('captions'); player.loadModule('cc');
+      let list = []; try { list = player.getOption('captions', 'tracklist') || []; } catch {}
+      if (list.length) {
+        const pick = list.find(t => t.languageCode === 'th') || list.find(t => /^th/i.test(t.languageCode || '')) || list[0];
+        const trk = { languageCode: pick.languageCode };
+        player.setOption('captions', 'track', trk); try { player.setOption('cc', 'track', trk); } catch {}
+      } else {
+        player.setOption('captions', 'track', { languageCode: 'th' }); try { player.setOption('cc', 'track', { languageCode: 'th' }); } catch {}
+        if (last && ccToastFor !== playToken) { ccToastFor = playToken; toast('วิดีโอนี้อาจไม่มีคำบรรยาย (หรือ YouTube ยังโหลดไม่เสร็จ)'); }
+      }
+    } catch {}
+  };
+  run(false);
+  if (ccEnabled) [700, 1800, 3500, 6500].forEach((ms, i, arr) => ccTimers.push(setTimeout(() => run(i === arr.length - 1), ms)));
 }
 function applyPause() {
   try { if (!player || !player.getPlayerState) return; if (paused) player.pauseVideo(); else if (player.getPlayerState() === 2) player.playVideo(); } catch {}
@@ -811,11 +852,37 @@ function swapToPre(my, startSec) {      // ตัวสำรองที่โ�
   try { player.seekTo(startSec || 0, true); player.unMute(); player.setVolume(ui.volume); player.playVideo(); applyCC(); } catch {}
   ensurePlaying(my);
 }
-let resumeTries = 0, errSkips = 0, loadCount = 0;
+let resumeTries = 0, errSkips = 0, loadCount = 0, ccDoneFor = -1;
 function wantPlaying() {      // ตอนนี้เพลงหลัก "ควรกำลังเล่นอยู่" ไหม (ใช้กันกรณีเบราว์เซอร์/ทีวีพักเพลงเอง)
-  if (mode === 'quiz') { const r = quiz.round; return !!r && !(qType(r) === 'lyric' && r.status !== 'revealed') && !quiz.buzz.length && !summaryShown && !quiz.game.over; }
+  if (mode === 'quiz') { const r = quiz.round; return !!r && r.status !== 'ready' && !(qType(r) === 'lyric' && r.status !== 'revealed') && !quiz.buzz.length && !summaryShown && !quiz.game.over; }
   return !!(currentSong && !paused);
 }
+let wdKey = null, wdT = -1, wdAt = Date.now(), wdStage = 0;
+function rebuildPlayer() {      // ตัวเล่นค้าง → สร้างใหม่แล้วเล่นต่อจากตำแหน่งเดิม
+  if (!isMain || !player) return;
+  const t = Math.max(0, Math.floor(wdT > 0 ? wdT : 0));
+  try { player.destroy(); } catch {} player = null; dropPre(); loadCount = 0;
+  const my = playToken;
+  try {
+    if (mode === 'quiz') { const r = quiz.round; if (r && r.status === 'playing' && qType(r) !== 'lyric') makeOrLoad(r.vid, t || r.start, my); }
+    else if (currentSong) { const id = videoId(currentSong.url); if (id) makeOrLoad(id, t, my); }
+  } catch {}
+  toast('ตัวเล่นเพลงค้าง กำลังรีเซ็ตให้อัตโนมัติ');
+}
+setInterval(() => {      // ตัวเฝ้า: ควรเล่นอยู่แต่เวลาไม่เดินเกิน 20 วิ → สั่งเล่น, เกิน 32 วิ → สร้างตัวเล่นใหม่
+  if (!isMain || !started || !player || !player.getPlayerState || document.hidden) return;
+  try {
+    const now = Date.now();
+    if (playToken !== wdKey) { wdKey = playToken; wdT = -1; wdAt = now; wdStage = 0; return; }
+    if (!wantPlaying() || !$('tapPlay').classList.contains('hidden')) { wdAt = now; wdStage = 0; return; }
+    const st = player.getPlayerState(), t = player.getCurrentTime();
+    if (st === 0) { wdAt = now; return; }
+    if (st === 1 && Math.abs(t - wdT) > 0.3) { wdT = t; wdAt = now; wdStage = 0; return; }
+    const stuck = now - wdAt;
+    if (wdStage === 0 && stuck > 20000) { wdStage = 1; player.playVideo(); }
+    else if (wdStage === 1 && stuck > 32000) { wdStage = 2; rebuildPlayer(); wdAt = Date.now(); }
+  } catch {}
+}, 3000);
 async function quizAutoReplace(n) {
   const r = quiz.round;
   if (!isMain || !r || r.n !== n || r.status !== 'playing') return;
@@ -835,6 +902,7 @@ function ytEvents() {
       if (e.target === pre) { if (e.data === 1 && !preReady) { preReady = true; try { e.target.pauseVideo(); } catch {} } return; }
       if (e.data === 1 || e.data === 2) { showLoading(false); clearTimeout(loadTimer); }
       if (e.data === 1) { resumeTries = 0; errSkips = 0; }
+      if (e.data === 1 && e.target === player && ccEnabled && ccDoneFor !== playToken) { ccDoneFor = playToken; applyCC(); }
       if (e.data === 2 && e.target === player && wantPlaying() && resumeTries < 5) {      // ถูกพักโดยไม่ได้ตั้งใจ → สั่งเล่นต่อเอง
         resumeTries++;
         setTimeout(() => { try { if (e.target === player && player.getPlayerState() === 2 && wantPlaying()) player.playVideo(); } catch {} }, 500);
@@ -861,7 +929,7 @@ function ytEvents() {
   };
 }
 function makeOrLoad(videoId, start, my) {
-  if (player && ++loadCount >= 8) { loadCount = 0; try { player.destroy(); } catch {} player = null; }      // สร้างตัวเล่นใหม่ทุก 8 เพลง กันอุปกรณ์ค้างสะสม
+  if (player && ++loadCount >= 4) { loadCount = 0; try { player.destroy(); } catch {} player = null; }      // สร้างตัวเล่นใหม่ทุก 8 เพลง กันอุปกรณ์ค้างสะสม
   if (!player) {
     $('playerContainer').innerHTML = '<div id="ytTarget" class="w-full h-full"></div>';
     player = new YT.Player('ytTarget', {
@@ -923,7 +991,7 @@ let qrCornerDone = false;
 function renderQrCorner() {      // QR ค้างมุมขวาล่าง ให้คนมาใหม่สแกนได้ตลอด (ปุ่ม Q บนคีย์บอร์ดก็สลับได้)
   if (!isMain) return;
   const idleVisible = !(started && !peek && (mode === 'quiz' || !!currentSong));
-  const on = ui.pinQR && started && !idleVisible;
+  const on = ui.pinQR && started && !idleVisible && !(mode === 'quiz' && !quiz.round);
   $('qrCorner').classList.toggle('hidden', !on);
   if (on && !qrCornerDone) {
     qrCornerDone = true;
@@ -1047,6 +1115,7 @@ function hintParts(r) {      // ค่าที่แอดมินแก้เ
   const sp = splitVideoTitle(r || {});
   return { title: sp.title, artist: sp.artist, how: sp.how, known: !!sp.artist };
 }
+const hintTag = h => ({ match: '', topic: '(ช่อง Topic)', channel: '(ใช้ชื่อช่องเป็นศิลปิน เดา ตรวจดูด้วย)', guess: '(เดาจากรูปแบบ ตรวจดูด้วย)', manual: '(แอดมินแก้เอง)', unknown: '' }[h.how] || '');
 const hintSplitNote = r => {
   const h = hintParts(r);
   const tag = { match: '', topic: ' (ช่อง Topic)', channel: ' (ใช้ชื่อช่องเป็นศิลปิน เดา ตรวจดูด้วย)', guess: ' (เดาจากรูปแบบ ตรวจดูด้วย)', manual: ' (แอดมินแก้เอง)', unknown: '' }[h.how] || '';
@@ -1092,6 +1161,12 @@ function clearBuzzResume() {      // ล้างคิว BUZZ แล้วเ�
 }
 let qcCoverVid = null;
 function renderQuizTimerMain() {
+  { const rr = quiz.round, ic = $('qcIcon');
+    if (rr && rr.status === 'ready') {
+      const sec = Math.max(1, Math.ceil(((rr.readyAt || 0) - srvNow()) / 1000));
+      ic.textContent = rr.hold ? '⏸' : String(Math.min(sec, 3)); ic.style.fontSize = '220px';
+      if (rr.hold) $('qcSub').textContent = '⏸ รอแอดมินตรวจสอบเพลง...';
+    } else ic.style.fontSize = ''; }
   const r = quiz.round, show = !!r && r.status === 'playing' && !quiz.game.over;
   $('qcTimer').classList.toggle('hidden', !show); $('qcHint').classList.toggle('hidden', !show);
   $('qcCover').classList.toggle('hidden', !show);
@@ -1130,22 +1205,27 @@ function renderQuizSummary(on) {
     ['🎉', '🏆', '👏', '🔥', '🎊', '🎤'].forEach((e, i) => setTimeout(() => { floatEmoji(e); floatEmoji(e); }, i * 400));
   }
 }
+let readyFor = '';
 function quizTick() {
   if (mode !== 'quiz') return;
-  if (isMain) renderQuizTimerMain(); else renderQuizTimerPhone();
+  if (isMain) renderQuizTimerMain(); else { renderQuizTimerPhone(); renderQuizChk(); }
   const r = quiz.round;
+  if (isMain && r && r.status === 'ready') {      // นับถอยหลังเสร็จ → เริ่มเล่น (ถ้าแอดมินไม่ได้กดแก้ไขค้างไว้)
+    if (r.hold && r.holdAt && srvNow() - r.holdAt > 90000) guard(update(ref(db, `rooms/${roomId}/quiz/round`), { hold: false, readyAt: srvNow() + 1000 }));
+    else if (!r.hold && r.readyAt && srvNow() >= r.readyAt && readyFor !== r.n + ':' + r.readyAt) { readyFor = r.n + ':' + r.readyAt; guard(update(ref(db, `rooms/${roomId}/quiz/round`), { status: 'playing' })); }
+  }
   if (isMain && r && r.status === 'playing' && r.startAt && qLeft(r) === 0 && !quiz.buzz.length && timeoutFor !== r.n) {      // หมดเวลา: เฉลยเอง
     timeoutFor = r.n;
     guard(update(ref(db, `rooms/${roomId}/quiz/round`), { status: 'revealed', timeout: true }));
     try { SFX.fail(); } catch {}
   }
 }
-setInterval(quizTick, 500);
+setInterval(quizTick, 250);
 function killPlayer() { playToken++; dropPre(); showLoading(false); clearTimeout(loadTimer); if (player && player.stopVideo) { try { player.stopVideo(); } catch {} } $('tapPlay').classList.add('hidden'); }
 function applyMode() {
   if (!isMain) return;
   killPlayer();
-  if (mode === 'quiz') { $('titleBar').classList.replace('opacity-100', 'opacity-0'); if (quiz.round) playQuizRound(quiz.round); }
+  if (mode === 'quiz') { $('titleBar').classList.replace('opacity-100', 'opacity-0'); if (quiz.round && quiz.round.status !== 'ready') playQuizRound(quiz.round); }
   else showSong(currentSong);
   renderQuizMain(); updateIdle();
 }
@@ -1162,7 +1242,8 @@ function quizMainSync(prev) {
   if (mode !== 'quiz') return;
   const r = quiz.round;
   if (!r) { if (prev.round) killPlayer(); return; }
-  if (!prev.round || prev.round.n !== r.n) { playQuizRound(r); return; }
+  if (!prev.round || prev.round.n !== r.n) { if (r.status === 'ready') killPlayer(); else playQuizRound(r); return; }
+  if (prev.round.status === 'ready' && r.status === 'playing') { playQuizRound(r); return; }
   if (prev.round.status !== 'revealed' && r.status === 'revealed') {
     if (qType(r) === 'lyric') playQuizRound(r); else { try { player.playVideo(); } catch {} }      // ข้อเนื้อเพลงยังไม่เล่นเสียงจนกว่าจะเฉลย
     const tot = qTotal();
@@ -1177,7 +1258,7 @@ function quizMainSync(prev) {
 function fitQuizStage() { const s = Math.min(innerWidth / 1920, innerHeight / 1080); document.querySelectorAll('.qz-stage').forEach(el => { el.style.transform = `translate(-50%,-50%) scale(${s})`; }); }
 window.addEventListener('resize', fitQuizStage); fitQuizStage();
 function renderQuizMain() {
-  fitQuizStage();
+  fitQuizStage(); renderQrCorner();
   const on = mode === 'quiz', r = quiz.round, rev = !!r && r.status === 'revealed';
   renderQuizSummary(on);
   $('quizHud').classList.toggle('hidden', !on || !!quiz.game.over);
@@ -1186,11 +1267,11 @@ function renderQuizMain() {
   if (!on) return;
   if (rev) { const ty = qType(r); const hp = hintParts(r); $('qbTitle').textContent = ty === 'artist' ? answerText(r) : hp.title; $('qbSub').textContent = ty === 'artist' ? 'เพลง: ' + hp.title : (hp.known ? '🎤 ' + hp.artist : (r.channel || '')); $('qbTag').textContent = (r.timeout ? '⏰ หมดเวลา · เฉลย' : '✅ เฉลย') + (ty === 'artist' ? ' (ศิลปิน/ช่อง)' : ty === 'both' ? ' (ชื่อเพลง + ศิลปิน)' : ''); }
   $('qcRound').textContent = r ? `🎯 ${QTYPES[qType(r)]} · ข้อที่ ${r.no || 1}${qTotal() ? '/' + qTotal() : ''}` : '🎯 ทายเพลง';
-  { const lobby = !r, w = $('qcQrWrap'), q = $('qrQuiz');
-    w.classList.toggle('hidden', quiz.buzz.length > 0); w.style.justifyContent = lobby ? 'center' : 'flex-end';
+  { const lobby = !r, ready = !!r && r.status === 'ready', w = $('qcQrWrap'), q = $('qrQuiz');
+    w.classList.toggle('hidden', quiz.buzz.length > 0 || ready); w.style.justifyContent = lobby ? 'center' : 'flex-end';
     q.style.width = q.style.height = (lobby ? 300 : 150) + 'px'; $('qrQuizCap').style.fontSize = (lobby ? 26 : 18) + 'px'; $('qrQuizCap').textContent = lobby ? '📱 สแกนเพื่อเข้าร่วมและใส่ชื่อ' : '📱 สแกนเข้าร่วม';
-    $('qcCenter').style.top = lobby ? '130px' : '280px'; $('qcCenter').style.bottom = lobby ? '440px' : '270px';
-    $('hudBuzz').classList.toggle('hidden', lobby); }
+    $('qcCenter').style.top = (lobby || ready) ? '130px' : '280px'; $('qcCenter').style.bottom = lobby ? '440px' : ready ? '120px' : '270px';
+    $('hudBuzz').classList.toggle('hidden', lobby || ready); }
   const pEntries = livePlayers();
   const showLobby = !r && pEntries.length > 0;
   $('qcPlayers').classList.toggle('hidden', !showLobby);
@@ -1205,6 +1286,11 @@ function renderQuizMain() {
     $('qcText').textContent = 'โหมดทายเพลง';
     $('qcSub').textContent = pEntries.length ? `พร้อมเล่นแล้ว ${pEntries.length} คน · รอแอดมินเริ่มข้อแรก` : 'สแกน QR Code ด้านล่างเพื่อเข้าร่วมเกมและใส่ชื่อได้เลย!';
   }
+  else if (r.status === 'ready') {
+    $('qcIcon').textContent = '⏳';
+    $('qcText').textContent = '🎧 เตรียมพร้อม!';
+    $('qcSub').textContent = `${QTYPES[qType(r)]} · ข้อที่ ${r.no || 1}${qTotal() ? '/' + qTotal() : ''}`;
+  }
   else if (quiz.buzz.length) {
     $('qcIcon').textContent = '🔔';
     $('qcText').textContent = `${quiz.buzz[0].name} กดก่อน!`;
@@ -1216,6 +1302,7 @@ function renderQuizMain() {
     $('qcText').textContent = ty === 'lyric' ? `“${r.clue}”` : ty === 'both' ? 'เพลงนี้ชื่ออะไร ใครร้อง?' : ty === 'artist' ? 'เพลงนี้ใครร้อง?' : 'เพลงลึกลับกำลังเล่น...';
     $('qcSub').textContent = ty === 'lyric' ? 'ท่อนนี้มาจากเพลงอะไร? กดปุ่ม BUZZ บนมือถือได้เลย!' : ty === 'both' ? 'ต้องตอบให้ได้ทั้งชื่อเพลงและศิลปิน กดปุ่ม BUZZ!' : ty === 'artist' ? 'ใครรู้ว่าศิลปินคนไหนร้อง กดปุ่ม BUZZ!' : 'ใครรู้ชื่อเพลง กดปุ่ม BUZZ บนมือถือได้เลย!';
   }
+  if (!r && quiz.game.paused) { $('qcIcon').textContent = '⏸'; $('qcText').textContent = 'พักเกมชั่วคราว'; $('qcSub').textContent = 'สแกน QR เพื่อเข้าร่วมระหว่างพัก · รอแอดมินกดเริ่มข้อถัดไป'; }
   $('hudBuzz').innerHTML = [0, 1].map(i => {
     const b = quiz.buzz[i];
     if (!b) return `<div class="rounded-[28px] border-2 border-dashed border-white/20 px-[28px] py-[16px] min-w-0 text-slate-400"><p class="text-[18px] font-semibold tracking-widest">คนที่ ${i + 1}</p><p class="text-[34px] font-bold mt-1">${i === 1 && quiz.buzz.length === 1 && !buzzWindowOpen() ? 'ปิดรับแล้ว' : 'รอคนกด…'}</p></div>`;
@@ -1683,6 +1770,8 @@ function renderQuizPhone() {
   const ty = qType(r), revLine = r ? (ty === 'artist' ? `${answerText(r)} (เพลง: ${hintParts(r).title})` : answerText(r)) : '';
   $('qStatus').textContent = g.over ? `🏁 จบเกมแล้ว · ${winnerText()}` : !r ? '⏳ รอแอดมินเลือก/สุ่มเพลง...' : rev ? (r.timeout ? `⏰ หมดเวลา · เฉลย: ${revLine}` : `✅ เฉลย: ${revLine}`) : quiz.buzz.length ? `🔔 ${quiz.buzz[0].name} กดก่อน!` : `${QTYPES[ty]} · ข้อที่ ${r.no || 1}${tot ? '/' + tot : ''}${ty === 'lyric' ? `\n“${r.clue}”` : ''}\nใครรู้กด BUZZ!`;
   const pEntries = livePlayers();
+  if (!r && g.paused) $('qStatus').textContent = '⏸ พักเกมชั่วคราว · รอแอดมินเริ่มข้อต่อไป';
+  if (r && r.status === 'ready' && !g.over) $('qStatus').textContent = '⏳ เตรียมพร้อม... เพลงกำลังจะเริ่ม';
   $('qLobbyBox').classList.toggle('hidden', !!r || pEntries.length === 0);
   $('qLobbyCount').textContent = pEntries.length;
   $('qLobbyList').innerHTML = pEntries.map(([id, p]) => {
@@ -1694,14 +1783,28 @@ function renderQuizPhone() {
   $('playerCount').textContent = pEntries.length;
   registerPlayer(isAdmin);
   const open = buzzWindowOpen();
-  const bb = $('buzzBtn'); bb.disabled = !r || rev || mine >= 0 || !open || !!g.over;
+  const bb = $('buzzBtn'); bb.disabled = !r || rev || r.status === 'ready' || mine >= 0 || !open || !!g.over;
   bb.textContent = mine >= 0 ? `คุณกดเป็นลำดับที่ ${mine + 1}` : !open ? (quiz.buzz.length >= 2 ? 'ครบ 2 คนแล้ว' : 'หมดเวลากด') : '🔔 BUZZ!';
+  if (r && r.status === 'ready') bb.textContent = '⏳ เตรียมพร้อม...';
   scheduleWindowRefresh(renderQuizPhone);
-  renderQuizTimerPhone();
+  renderQuizTimerPhone(); renderQuizChk();
   renderPrepList();
   if (quiz.game && quiz.game.cat) { quizCat = quiz.game.cat; const cs = $('quizCatSel'); if (cs && cs.value !== quizCat) cs.value = quizCat; }
   document.querySelectorAll('[data-cfg]').forEach(b => { const k = b.dataset.cfg; b.dataset.on = String(k === 'total' ? qTotal() : k === 'limit' ? qLimit() : k === 'type' ? gameType() : (teamsOn() ? '1' : '0')) === b.dataset.val ? '1' : '0'; });
-  $('qSecret').textContent = r ? `${QTYPES[ty]} · คำตอบ: ${answerText(r)}${hintSplitNote(r)} — ${r.channel || ''}${ty === 'lyric' ? ` · เนื้อ: “${r.clue}”` : ''} (เริ่มที่ ${fmt(r.start)} จาก ${fmt(r.dur)})` : 'เลือกสุ่มเพลงจากชาร์ต หรือค้นหาเพลงเองด้านล่าง';
+  { const el = $('qSecret');
+    if (!r) el.innerHTML = '<span class="text-slate-500">เมื่อเริ่มข้อ ระบบจะแสดงเฉลยให้แอดมินเห็นที่นี่</span>';
+    else {
+      const h = hintParts(r);
+      el.innerHTML = [
+        `<div class="text-[10px] text-slate-500">${esc(QTYPES[ty])} · ข้อ ${r.no || 1}</div>`,
+        `<div>🎵 <b>ชื่อเพลง:</b> ${esc(h.title)}</div>`,
+        `<div>🎤 <b>ศิลปิน:</b> ${h.known ? esc(h.artist) : '<span class="text-amber-300">⚠ ไม่ทราบ กด ✎ เพื่อใส่ชื่อ หรือข้ามเพลง</span>'} <span class="text-slate-500">${esc(hintTag(h))}</span></div>`,
+        `<div class="pt-1 mt-1 border-t border-white/10 text-slate-400">ชื่อเต็มวิดีโอ: <span class="text-slate-200">${esc(r.title)}</span></div>`,
+        `<div class="text-slate-400">ช่อง: <span class="text-slate-200">${esc(r.channel || '-')}</span></div>`,
+        ty === 'lyric' ? `<div class="text-slate-400">เนื้อเพลงที่ใช้ทาย: “${esc(r.clue)}”</div>` : '',
+        `<div class="text-slate-500">เริ่มเล่นที่ ${fmt(r.start)} จาก ${fmt(r.dur)}</div>`
+      ].join('');
+    } }
   $('qBuzz').innerHTML = quiz.buzz.length ? quiz.buzz.map((b, i) => `<div class="flex items-center gap-2 p-2 rounded-xl bg-slate-900 border ${i === 0 ? 'border-amber-400/60' : 'border-slate-800'}">
     <span class="w-5 text-xs text-slate-500">${i + 1}</span><span class="flex-1 text-sm truncate">${b.team ? TEAMS[b.team].emoji + ' ' : ''}${esc(b.name)}</span>
     ${b.judged ? (b.judged === '+' ? `<span class="text-xs">✅ +${b.pts || 1}</span>` : '<span class="text-xs">❌ ผิด</span>')
@@ -1713,7 +1816,7 @@ function renderQuizPhone() {
 
 window.buzz = () => {
   const r = quiz.round;
-  if (!r || r.status === 'revealed' || !buzzWindowOpen() || quiz.buzz.some(b => b.id === cid)) return;
+  if (!r || r.status !== 'playing' || !buzzWindowOpen() || quiz.buzz.some(b => b.id === cid)) return;
   if (teamsOn() && !quiz.teams[cid]) return toast('เลือกทีมของคุณก่อนกด BUZZ');
   const typedName = ($('qNameInput').value.trim() || $('nameInput').value.trim());
   if (!typedName) { $('qNameInput').focus(); return toast('กรุณาใส่ชื่อของคุณก่อนกดปุ่ม BUZZ!'); }
@@ -1734,7 +1837,7 @@ let qPool = [], qUsed = new Set();
 function quizBlocked() {
   if (quiz.game.over) { toast('เกมจบแล้ว กด "เริ่มเกมใหม่" ก่อน'); return true; }
   const tot = qTotal();
-  if (tot > 0 && quiz.round && (quiz.round.no || 1) >= tot) { toast('ครบ ' + tot + ' ข้อแล้ว กด "จบเกม / สรุปผล"'); return true; }
+  if (tot > 0 && (quiz.round ? (quiz.round.no || 1) : (quiz.game.carryNo || 0)) >= tot) { toast('ครบ ' + tot + ' ข้อแล้ว กด "จบเกม / สรุปผล"'); return true; }
   return false;
 }
 let quizSrcMode = 'rand', quizCat = 'top';
@@ -1757,7 +1860,8 @@ async function addRandomPrep(n) {
 function startRound(p, prepId, keepNo) {
   saveLib('q', p);
   const start = Math.round((p.dur || 180) * (0.28 + Math.random() * 0.06));      // ประมาณช่วงก่อนฮุก
-  const upd = { round: { type: p.type || gameType(), clue: p.clue || '', vid: p.vid, title: p.title, channel: p.channel || '', dur: p.dur || 180, ho: p.ho || ((libCache.q && libCache.q.items[p.vid] && libCache.q.items[p.vid].ho) || null), start, status: 'playing', n: Date.now(), no: keepNo && quiz.round ? (quiz.round.no || 1) : ((quiz.round && quiz.round.no) || 0) + 1, limit: qLimit() }, buzz: null };
+  const hoV = p.ho || ((libCache.q && libCache.q.items[p.vid] && libCache.q.items[p.vid].ho) || null);
+  const upd = { round: { type: p.type || gameType(), clue: p.clue || '', vid: p.vid, title: p.title, channel: p.channel || '', dur: p.dur || 180, ho: hoV, start, status: 'ready', readyAt: srvNow() + 3000, hold: false, chk: !(hoV && hoV.title), n: Date.now(), no: keepNo && quiz.round ? (quiz.round.no || 1) : ((quiz.round && quiz.round.no) || quiz.game.carryNo || 0) + 1, limit: qLimit() }, buzz: null, 'game/paused': false, 'game/carryNo': null };
   if (prepId) upd['prep/' + prepId] = null;
   guard(update(ref(db, `rooms/${roomId}/quiz`), upd));
   if (quizSrcMode === 'rand' && quiz.prep.length - (prepId ? 1 : 0) < 1) addRandomPrep(1).catch(() => {});      // เตรียมข้อถัดไปไว้ให้จอหลักโหลดรอ
@@ -1772,6 +1876,13 @@ window.quizNext = async () => {
     if (!item) return toast('ไม่พบเพลงในแหล่งนี้');
   }
   startRound(item, item.id);
+};
+window.quizPause = () => {      // พักเกม: จอหลักกลับไปหน้าเตรียม (มี QR ใหญ่) · ข้อที่ค้างอยู่ไม่นับ · กด "เริ่มข้อถัดไป" เพื่อเล่นต่อ
+  if (quiz.adminId !== cid) return;
+  const r = quiz.round, g = quiz.game || {};
+  const carry = r ? (r.status === 'revealed' ? (r.no || 1) : Math.max(0, (r.no || 1) - 1)) : (g.carryNo || 0);
+  guard(update(ref(db, `rooms/${roomId}/quiz`), { round: null, buzz: null, 'game/paused': true, 'game/carryNo': carry }));
+  toast('พักเกม · จอหลักแสดงหน้าเตรียม กด "เริ่มข้อถัดไป" เพื่อเล่นต่อ');
 };
 window.quizSkip = async () => {      // ข้ามเพลงนี้ ไปเพลงใหม่ โดยไม่นับเป็นข้อใหม่ ไม่เสียโควตา
   if (quiz.adminId !== cid) return;
@@ -1912,12 +2023,15 @@ fillQuizCats();
 function renderPrepList() {
   const el = $('quizPrepList'); if (!el) return;
   $('prepCount').textContent = quiz.prep.length;
-  el.innerHTML = quiz.prep.length ? quiz.prep.map((p, i) => `<div class="flex items-center gap-2 p-2 rounded-xl bg-slate-950 border border-slate-800"><span class="w-5 text-center text-xs font-bold text-slate-500">${i + 1}</span><img src="${thumb(p.vid)}" class="w-14 aspect-video object-cover rounded"><p class="flex-1 min-w-0 text-xs line-clamp-2">${p.type === 'lyric' ? '📝 ' : p.type === 'both' ? '🎶 ' : p.type === 'artist' ? '🎤 ' : ''}${esc(p.title)}</p><div class="flex flex-col gap-1">${i > 0 ? `<button onclick="prepUp('${esc(p.id)}')" class="px-2 py-0.5 bg-slate-800 rounded text-[10px]">ขึ้นก่อน</button>` : ''}<button onclick="prepRemove('${esc(p.id)}')" class="px-2 py-0.5 bg-slate-800 text-red-400 rounded text-[10px]">ลบ</button></div></div>`).join('') : '<p class="text-xs text-slate-500 text-center py-2">ยังไม่มีข้อที่เตรียมไว้</p>';
+  el.innerHTML = quiz.prep.length ? quiz.prep.map((p, i) => {
+    const ho = p.ho || (libCache.q && libCache.q.items[p.vid] && libCache.q.items[p.vid].ho) || null, h = hintParts({ title: p.title, channel: p.channel, ho });
+    return `<div class="flex items-center gap-2 p-2 rounded-xl bg-slate-950 border border-slate-800"><span class="w-5 text-center text-xs font-bold text-slate-500">${i + 1}</span><img src="${thumb(p.vid)}" class="w-14 aspect-video object-cover rounded"><div class="flex-1 min-w-0"><p class="text-xs line-clamp-2">${p.type === 'lyric' ? '📝 ' : p.type === 'both' ? '🎶 ' : p.type === 'artist' ? '🎤 ' : ''}${esc(p.title)}</p><p class="text-[10px] text-sky-300 truncate">🎵 ${esc(h.title)} · 🎤 ${h.known ? esc(h.artist) : '⚠ ไม่ทราบ'}${ho && ho.title ? ' ✓' : ''}</p></div><div class="flex flex-col gap-1">${i > 0 ? `<button onclick="prepUp('${esc(p.id)}')" class="px-2 py-0.5 bg-slate-800 rounded text-[10px]">ขึ้นก่อน</button>` : ''}<button onclick="prepEdit('${esc(p.id)}')" class="px-2 py-0.5 bg-slate-800 text-amber-300 rounded text-[10px]">✎ แก้</button><button onclick="prepRemove('${esc(p.id)}')" class="px-2 py-0.5 bg-slate-800 text-red-400 rounded text-[10px]">ลบ</button></div></div>`;
+  }).join('') : '<p class="text-xs text-slate-500 text-center py-2">ยังไม่มีข้อที่เตรียมไว้</p>';
 }
 window.setQuizCfg = (k, v) => { if (quiz.adminId === cid) guard(update(ref(db, `rooms/${roomId}/quiz/game`), { [k]: v })); };
 window.quizFinish = () => { if (quiz.adminId === cid) guard(update(ref(db, `rooms/${roomId}/quiz/game`), { over: true })); };
-window.quizNewGame = () => { if (quiz.adminId !== cid || !confirm('เริ่มเกมใหม่? ข้อและคะแนนทั้งหมดจะถูกล้าง')) return; guard(update(ref(db, `rooms/${roomId}/quiz`), { round: null, buzz: null, scores: null, teamScores: null, 'game/over': false })); };
-window.quizReveal = () => { if (quiz.adminId === cid && quiz.round) guard(update(ref(db, `rooms/${roomId}/quiz/round`), { status: 'revealed' })); };
+window.quizNewGame = () => { if (quiz.adminId !== cid || !confirm('เริ่มเกมใหม่? ข้อและคะแนนทั้งหมดจะถูกล้าง')) return; guard(update(ref(db, `rooms/${roomId}/quiz`), { round: null, buzz: null, scores: null, teamScores: null, 'game/over': false, 'game/paused': false, 'game/carryNo': null })); };
+window.quizReveal = () => { if (quiz.adminId === cid && quiz.round && quiz.round.status === 'ready') return toast('รอเพลงเริ่มก่อน'); if (quiz.adminId === cid && quiz.round) guard(update(ref(db, `rooms/${roomId}/quiz/round`), { status: 'revealed' })); };
 function saveHintOverride(ho) {      // แก้ชื่อ/ศิลปินของข้อนี้ + จำไว้ในคลังเพื่อให้ครั้งหน้าถูกเอง
   const r = quiz.round; if (!r) return;
   guard(update(ref(db, `rooms/${roomId}/quiz/round`), { ho }));
@@ -1931,13 +2045,53 @@ window.quizSwapHint = () => {
   saveHintOverride({ title: h.artist, artist: h.title });
   toast('สลับชื่อเพลง/ศิลปินแล้ว (จำไว้ให้ครั้งหน้า)');
 };
-window.quizEditArtist = () => {
-  const r = quiz.round; if (quiz.adminId !== cid || !r) return;
-  const h = hintParts(r), v = prompt('ชื่อศิลปินที่ถูกต้อง', h.artist || '');
-  if (v === null || !v.trim()) return;
-  saveHintOverride({ title: h.title, artist: v.trim() });
-  toast('บันทึกชื่อศิลปินแล้ว (จำไว้ให้ครั้งหน้า)');
+const qRoundRef = () => ref(db, `rooms/${roomId}/quiz/round`);
+let qEdTarget = null, qChkHtml = '';
+function savePrepOverride(it, ho) {
+  guard(update(ref(db, `rooms/${roomId}/quiz/prep/${it.id}`), { ho }));
+  guard(update(ref(db, `lib/q/${it.vid}`), { ho, title: it.title, channel: it.channel || '', st: Date.now(), ...(it.dur ? { dur: it.dur } : {}) }));
+  if (libCache.q) libCache.q.items[it.vid] = { ...(libCache.q.items[it.vid] || { title: it.title, channel: it.channel || '' }), ho };
+}
+function openEditor(target, vals, refInfo) {
+  qEdTarget = target;
+  $('qEdTitle').value = vals.title || ''; $('qEdArtist').value = vals.artist || '';
+  $('qEdRef').innerHTML = `ชื่อเต็มวิดีโอ: <b class="text-slate-200">${esc(refInfo.title)}</b><br>ช่อง: <b class="text-slate-200">${esc(refInfo.channel || '-')}</b>`;
+  $('qEd').classList.remove('hidden'); $('qChk').classList.add('hidden');
+}
+window.quizEditRound = () => {      // แก้ชื่อเพลง/ศิลปินของข้อที่กำลังเล่น (ถ้ายังนับถอยหลังอยู่ จะพักนับให้ระหว่างแก้)
+  const r = quiz.round; if (quiz.adminId !== cid) return; if (!r) return toast('ยังไม่มีข้อที่กำลังเล่น');
+  if (r.status === 'ready') guard(update(qRoundRef(), { hold: true, holdAt: srvNow() }));
+  const h = hintParts(r); openEditor({ kind: 'round', n: r.n }, { title: h.title, artist: h.artist }, r);
 };
+window.quizEditArtist = window.quizEditRound;
+window.prepEdit = id => {      // แก้เพลงที่เตรียมไว้ในคิวล่วงหน้า
+  if (quiz.adminId !== cid) return; const it = quiz.prep.find(x => x.id === id); if (!it) return;
+  const ho = it.ho || (libCache.q && libCache.q.items[it.vid] && libCache.q.items[it.vid].ho) || null;
+  const h = hintParts({ title: it.title, channel: it.channel, ho }); openEditor({ kind: 'prep', id }, { title: h.title, artist: h.artist }, it);
+};
+window.quizEdSwap = () => { const t = $('qEdTitle').value; $('qEdTitle').value = $('qEdArtist').value; $('qEdArtist').value = t; };
+window.quizEdCancel = () => {
+  $('qEd').classList.add('hidden');
+  const r = quiz.round; if (qEdTarget && qEdTarget.kind === 'round' && r && r.status === 'ready' && r.hold) guard(update(qRoundRef(), { hold: false, readyAt: srvNow() + 3000 }));
+  qEdTarget = null; renderQuizChk();
+};
+window.quizEdSave = () => {
+  const title = $('qEdTitle').value.trim(), artist = $('qEdArtist').value.trim();
+  if (!title) return toast('กรุณาใส่ชื่อเพลง'); if (!qEdTarget) return;
+  if (qEdTarget.kind === 'prep') { const it = quiz.prep.find(x => x.id === qEdTarget.id); if (it) savePrepOverride(it, { title, artist }); }
+  else { const r = quiz.round; if (r) { saveHintOverride({ title, artist }); if (r.status === 'ready') guard(update(qRoundRef(), { hold: false, chk: false, readyAt: srvNow() + 3000 })); } }
+  $('qEd').classList.add('hidden'); qEdTarget = null; toast('บันทึกแล้ว (จำไว้ให้ครั้งหน้า)'); renderQuizChk();
+};
+window.quizChkGo = () => { const r = quiz.round; if (quiz.adminId === cid && r && r.status === 'ready') guard(update(qRoundRef(), { hold: false, readyAt: srvNow() })); };
+function renderQuizChk() {      // ป๊อปอัปให้แอดมินตรวจเพลงที่ยังไม่เคยแก้ ระหว่างจอหลักนับ 3 วิ
+  const r = quiz.round, el = $('qChk'); if (!el || isMain) return;
+  const show = mode === 'quiz' && quiz.adminId === cid && !!r && r.status === 'ready' && !!r.chk && qEdTarget === null;
+  el.classList.toggle('hidden', !show); if (!show) return;
+  const h = hintParts(r);
+  $('qChkCount').textContent = r.hold ? '⏸ รอแก้ไข' : `เริ่มใน ${Math.max(0, Math.ceil(((r.readyAt || 0) - srvNow()) / 1000))} วิ`;
+  const html = `<div>🎵 <b>ชื่อเพลง:</b> ${esc(h.title)}</div><div>🎤 <b>ศิลปิน:</b> ${h.known ? esc(h.artist) : '<span class="text-amber-300">⚠ ไม่ทราบ</span>'} <span class="text-slate-500">${esc(hintTag(h))}</span></div><div class="pt-1.5 border-t border-slate-700 text-slate-400"><div>ชื่อเต็มวิดีโอ: <span class="text-slate-200">${esc(r.title)}</span></div><div>ช่อง: <span class="text-slate-200">${esc(r.channel || '-')}</span></div></div>`;
+  if (html !== qChkHtml) { qChkHtml = html; $('qChkInfo').innerHTML = html; }
+}
 window.quizAdjust = (pid, d) => {      // แอดมินเพิ่ม/ลดคะแนนเอง (ถ้าเล่นแบบทีม คะแนนทีมของคนนั้นขยับตาม)
   if (quiz.adminId !== cid || !d) return;
   const nm = (quiz.scores.find(x => x.id === pid) || {}).name || (quiz.players[pid] || {}).name || 'ผู้เล่น';
