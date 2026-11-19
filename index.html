@@ -16,10 +16,14 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
+:root{--s950:10 10 18;--s900:19 19 31;--s800:28 28 44;--s700:42 42 63;--s600:59 59 85;--p200:251 207 232;--p300:249 168 212;--p400:244 114 182;--p500:255 79 139;--p600:240 48 111;--v600:124 58 237;--g1:#ff4f8b;--g2:#8b5cf6;--gt1:#ff7aa8;--gt2:#a78bfa;--cardb:#1f1f31;--surfh:#26263a;--seg:#0d0d17;--mut:#8b8ba3;--mut2:#7b7b95;--mut3:#6b6b85}
+/* โหมดทายเพลง: โทนน้ำเงิน-ฟ้า (โหมดคาราโอเกะคือชมพู-ม่วง) */
+html.qmode{--s950:5 11 26;--s900:11 22 48;--s800:18 33 63;--s700:30 50 96;--s600:47 74 133;--p200:165 243 252;--p300:103 232 249;--p400:34 211 238;--p500:6 182 212;--p600:8 145 178;--v600:37 99 235;--g1:#0891b2;--g2:#2563eb;--gt1:#67e8f9;--gt2:#93c5fd;--cardb:#16294d;--surfh:#1a2f58;--seg:#081226;--mut:#8aa0c8;--mut2:#7d93bb;--mut3:#6c82ab}
+
 :root{--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
-html{background:#0a0a12}
-.tgl{padding:.4rem .9rem;border-radius:999px;background:#1c1c2c;font-size:.75rem;font-weight:600;color:#8b8ba3;flex-shrink:0}
-.tgl[data-on="1"]{background:linear-gradient(135deg,#ff4f8b,#8b5cf6);color:#fff}
+html{background:rgb(var(--s950))}
+.tgl{padding:.4rem .9rem;border-radius:999px;background:rgb(var(--s800));font-size:.75rem;font-weight:600;color:var(--mut);flex-shrink:0}
+.tgl[data-on="1"]{background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff}
 #nextPopup{transition:opacity .7s,transform .7s;transform:translateY(-14px)}
 #nextPopup.opacity-100{transform:none}
 .pre-box{opacity:0!important;pointer-events:none!important;z-index:-1!important}
@@ -30,34 +34,35 @@ iframe{border:0}
 button{transition:transform .12s ease,background-color .2s,opacity .2s}
 button:active:not(:disabled){transform:scale(.95)}
 button:disabled{opacity:.45}
-.grad{background:linear-gradient(135deg,#ff4f8b,#8b5cf6)}
-.grad-text{background:linear-gradient(135deg,#ff7aa8,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent}
+.grad{background:linear-gradient(135deg,var(--g1),var(--g2))}
+.grad-text{background:linear-gradient(135deg,var(--gt1),var(--gt2));-webkit-background-clip:text;background-clip:text;color:transparent}
 .glass{background:rgba(255,255,255,.06);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.09)}
-.card{background:#13131f;border:1px solid #1f1f31;border-radius:20px}
-.pill{background:#1c1c2c;border-radius:999px}
-.chip{padding:.55rem .6rem;border-radius:12px;background:#1c1c2c;font-size:.75rem;text-align:center}
-.chip:hover{background:#26263a}
-.ibtn{width:44px;height:44px;border-radius:999px;display:grid;place-items:center;background:#1c1c2c;font-size:1.05rem}
-.label{font-size:11px;color:#7b7b95;font-weight:500;letter-spacing:.02em}
-.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;padding:4px;background:#0d0d17;border-radius:14px}
-.seg>button{padding:.5rem;border-radius:10px;font-size:.75rem;font-weight:600;color:#8b8ba3}
-.seg>button[data-on="1"]{background:linear-gradient(135deg,#ff4f8b,#8b5cf6);color:#fff}
-.nav-btn{display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 0 12px;font-size:10px;color:#6b6b85;position:relative}
+.card{background:rgb(var(--s900));border:1px solid var(--cardb);border-radius:20px}
+.pill{background:rgb(var(--s800));border-radius:999px}
+.chip{padding:.55rem .6rem;border-radius:12px;background:rgb(var(--s800));font-size:.75rem;text-align:center}
+.chip:hover{background:var(--surfh)}
+.ibtn{width:44px;height:44px;border-radius:999px;display:grid;place-items:center;background:rgb(var(--s800));font-size:1.05rem}
+.label{font-size:11px;color:var(--mut2);font-weight:500;letter-spacing:.02em}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;padding:4px;background:var(--seg);border-radius:14px}
+.seg>button{padding:.5rem;border-radius:10px;font-size:.75rem;font-weight:600;color:var(--mut)}
+.seg>button[data-on="1"]{background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff}
+.nav-btn{display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 0 12px;font-size:10px;color:var(--mut3);position:relative}
 .nav-btn>span:first-child{font-size:1.2rem;transition:transform .2s}
 .nav-btn[data-on="1"]{color:#fff}
 .nav-btn[data-on="1"]>span:first-child{transform:translateY(-2px) scale(1.12)}
-.nav-btn[data-on="1"]::after{content:"";position:absolute;bottom:5px;width:16px;height:3px;border-radius:3px;background:linear-gradient(135deg,#ff4f8b,#8b5cf6)}
-#ccBtn{padding:.4rem .9rem;border-radius:999px;background:#1c1c2c;font-size:.75rem;font-weight:600;color:#8b8ba3}
-#ccBtn[data-on="1"]{background:linear-gradient(135deg,#ff4f8b,#8b5cf6);color:#fff}
+.nav-btn[data-on="1"]::after{content:"";position:absolute;bottom:5px;width:16px;height:3px;border-radius:3px;background:linear-gradient(135deg,var(--g1),var(--g2))}
+#ccBtn{padding:.4rem .9rem;border-radius:999px;background:rgb(var(--s800));font-size:.75rem;font-weight:600;color:var(--mut)}
+#ccBtn[data-on="1"]{background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff}
 @keyframes blob{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(50px,-40px) scale(1.18)}}
+.qz-stage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform-origin:center center;transform:translate(-50%,-50%)}
 .blob{position:absolute;border-radius:50%;filter:blur(100px);opacity:.4;animation:blob 16s ease-in-out infinite}
-@keyframes ring{0%{box-shadow:0 0 0 0 rgba(255,79,139,.5),0 18px 50px rgba(255,79,139,.35)}100%{box-shadow:0 0 0 34px rgba(255,79,139,0),0 18px 50px rgba(255,79,139,.35)}}
-#buzzBtn{width:12.5rem;height:12.5rem;border-radius:999px;background:radial-gradient(circle at 35% 30%,#ff7aa8,#f0306f 55%,#b5154a);font-size:1.6rem;font-weight:800;margin:0 auto;display:block;border:4px solid rgba(255,255,255,.18)}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(245,158,11,.55),0 18px 50px rgba(245,158,11,.35)}100%{box-shadow:0 0 0 34px rgba(245,158,11,0),0 18px 50px rgba(245,158,11,.35)}}
+#buzzBtn{width:12.5rem;height:12.5rem;border-radius:999px;background:radial-gradient(circle at 35% 30%,#fde68a,#f59e0b 55%,#b45309);color:#1c1917;font-size:1.6rem;font-weight:800;margin:0 auto;display:block;border:4px solid rgba(255,255,255,.18)}
 #buzzBtn:not(:disabled){animation:ring 1.6s infinite}
 #titleBar{transition:opacity .7s,transform .7s;transform:translateY(12px)}
 #titleBar.opacity-100{transform:none}
 </style>
-<script>tailwind.config={theme:{extend:{colors:{slate:{950:'#0a0a12',900:'#13131f',800:'#1c1c2c',700:'#2a2a3f',600:'#3b3b55'},pink:{500:'#ff4f8b',600:'#f0306f'}}}}}</script>
+<script>tailwind.config={theme:{extend:{colors:{slate:{950:'rgb(var(--s950) / <alpha-value>)',900:'rgb(var(--s900) / <alpha-value>)',800:'rgb(var(--s800) / <alpha-value>)',700:'rgb(var(--s700) / <alpha-value>)',600:'rgb(var(--s600) / <alpha-value>)'},pink:{200:'rgb(var(--p200) / <alpha-value>)',300:'rgb(var(--p300) / <alpha-value>)',400:'rgb(var(--p400) / <alpha-value>)',500:'rgb(var(--p500) / <alpha-value>)',600:'rgb(var(--p600) / <alpha-value>)'},violet:{600:'rgb(var(--v600) / <alpha-value>)'}}}}}</script>
 </head>
 <body class="bg-slate-950 text-slate-100 antialiased">
 
@@ -89,34 +94,43 @@ button:disabled{opacity:.45}
     </div>
   </div>
 
-  <div id="quizCover" class="hidden absolute inset-0 z-[15] bg-slate-950 flex flex-col items-center justify-center text-center pt-36 md:pt-48 pb-6 pl-6 pr-[20rem] md:pr-[27rem] overflow-hidden">
+  <div id="quizCover" class="hidden absolute inset-0 z-[15] bg-slate-950 overflow-hidden">
     <div class="blob w-[38rem] h-[38rem] bg-violet-600 -top-40 -right-40"></div>
     <div class="blob w-[32rem] h-[32rem] bg-pink-500 -bottom-40 -left-32" style="animation-delay:-8s"></div>
-    <div class="relative flex flex-col items-center">
-      <p id="qcRound" class="pill px-4 py-1.5 text-pink-300 font-semibold text-base md:text-lg mb-4">🎯 ทายเพลง</p>
-      <div id="qcIcon" class="text-7xl md:text-8xl mb-3 animate-bounce">🎵</div>
-      <h2 id="qcText" class="text-3xl md:text-5xl font-extrabold text-white"></h2>
-      <p id="qcSub" class="text-slate-300 text-base md:text-xl mt-2"></p>
-      <div id="qcTimer" class="hidden mt-5 text-6xl md:text-8xl font-black tabular-nums text-amber-300"></div>
-      <p id="qcHint" class="hidden mt-3 text-xl md:text-3xl font-semibold text-pink-200 whitespace-pre-line leading-relaxed"></p>
-      <div id="qcPlayers" class="hidden mt-5 flex flex-wrap justify-center gap-2 max-w-2xl"></div>
-      <div id="qcQrWrap" class="hidden mt-6 flex flex-col items-center gap-3 glass p-4 rounded-3xl">
-        <div class="bg-white p-3 rounded-2xl"><div id="qrQuiz" class="w-44 h-44 md:w-60 md:h-60"></div></div>
-        <p class="text-amber-300 text-sm md:text-base font-medium">📱 สแกนเพื่อเข้าร่วมและใส่ชื่อ</p>
+    <div class="qz-stage">
+      <p id="qcRound" class="absolute left-[48px] top-[32px] pill px-[26px] py-[10px] text-pink-300 font-semibold text-[28px] whitespace-nowrap">🎯 ทายเพลง</p>
+      <div id="qcTimer" class="hidden absolute right-[488px] top-[12px] px-[36px] py-[4px] rounded-full bg-black/40 text-[80px] leading-[1.15] font-black tabular-nums text-amber-300 whitespace-nowrap"></div>
+      <div id="qcCenter" class="absolute left-[48px] w-[1384px] flex flex-col items-center justify-center text-center" style="top:280px;bottom:240px">
+        <div id="qcIcon" class="text-[96px] leading-none mb-[12px] animate-bounce"></div>
+        <h2 id="qcText" class="text-[60px] leading-[1.15] font-extrabold text-white"></h2>
+        <p id="qcSub" class="text-slate-300 text-[28px] mt-[10px]"></p>
+        <p id="qcHint" class="hidden mt-[22px] px-[36px] py-[18px] rounded-[28px] bg-white/10 border border-white/10 text-[40px] leading-[1.3] font-semibold text-pink-200 whitespace-pre-line"></p>
+        <div id="qcPlayers" class="hidden mt-[24px] flex flex-wrap justify-center gap-[12px] max-w-[1100px]"></div>
+      </div>
+      <div id="qcQrWrap" class="hidden absolute left-[48px] w-[1384px] flex" style="bottom:36px">
+        <div class="flex flex-col items-center gap-[10px] glass p-[18px] rounded-[28px]">
+          <div class="bg-white p-[10px] rounded-[16px]"><div id="qrQuiz" style="width:150px;height:150px"></div></div>
+          <p id="qrQuizCap" class="text-amber-300 font-medium text-center leading-tight" style="width:0;min-width:100%;font-size:18px">📱 สแกนเพื่อเข้าร่วมและใส่ชื่อ</p>
+        </div>
       </div>
     </div>
   </div>
-  <div id="quizHud" class="hidden absolute inset-0 z-[25] pointer-events-none">
-    <div id="hudBuzz" class="absolute top-6 left-6 md:top-8 md:left-8 flex gap-3 md:gap-5"></div>
-    <div class="absolute top-6 right-6 md:top-8 md:right-8 w-[19rem] md:w-[26rem] glass rounded-3xl p-4 md:p-6" style="max-height:calc(100% - 3rem);overflow:hidden">
-      <p class="text-sm md:text-xl font-bold text-amber-300 tracking-wide mb-3">🏆 ตารางคะแนน</p>
-      <div id="hudScores" class="space-y-2"></div>
+  <div id="quizHud" class="hidden absolute inset-0 z-[25] pointer-events-none overflow-hidden">
+    <div class="qz-stage">
+      <div id="hudBuzz" class="absolute left-[48px] top-[120px] w-[1384px] grid grid-cols-2 gap-[24px]"></div>
+      <div class="absolute right-[32px] top-[28px] w-[420px] glass rounded-[28px] p-[22px]" style="max-height:1024px;overflow:hidden">
+        <p class="text-[24px] font-bold text-amber-300 tracking-wide mb-[14px]">🏆 ตารางคะแนน</p>
+        <div id="hudScores" class="space-y-[8px]"></div>
+      </div>
+      <div id="quizBanner" class="hidden absolute left-[48px] bottom-[44px] glass rounded-[32px] px-[40px] py-[22px]" style="max-width:1380px">
+        <p id="qbTag" class="text-emerald-400 text-[18px] font-semibold tracking-widest">✅ เฉลย</p>
+        <h2 id="qbTitle" class="text-white font-extrabold text-[54px] leading-tight"></h2>
+        <p id="qbSub" class="text-slate-300 text-[30px] mt-[2px]"></p>
+      </div>
+      <div id="qcCover" class="hidden absolute left-[48px] bottom-[36px] w-[320px] h-[180px] rounded-[28px] overflow-hidden ring-4 ring-white/20 bg-slate-900 shadow-2xl">
+        <img id="qcCoverImg" alt="" class="w-full h-full object-cover" style="filter:blur(36px);transform:scale(1.2);transition:filter .5s linear">
+      </div>
     </div>
-  </div>
-  <div id="quizBanner" class="hidden absolute left-6 bottom-6 md:left-10 md:bottom-10 z-[25] glass rounded-3xl px-6 py-4" style="max-width:calc(100% - 22rem)">
-    <p id="qbTag" class="text-emerald-400 text-xs md:text-sm font-semibold tracking-widest">✅ เฉลย</p>
-    <h2 id="qbTitle" class="text-white font-extrabold text-2xl md:text-4xl leading-tight"></h2>
-    <p id="qbSub" class="text-slate-300 text-base md:text-xl mt-0.5"></p>
   </div>
   <div id="loadingPill" class="hidden absolute top-6 left-1/2 -translate-x-1/2 z-[28] glass rounded-full px-6 py-3 flex items-center gap-3 text-white text-base md:text-xl">
     <span class="w-5 h-5 md:w-6 md:h-6 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>กำลังโหลดเพลง…
@@ -308,6 +322,10 @@ button:disabled{opacity:.45}
           <button onclick="setMode('karaoke')" class="chip !py-1.5">🎤 กลับคาราโอเกะ</button>
         </div>
         <p id="qSecret" class="text-xs text-slate-300 break-words bg-black/30 rounded-xl p-3 leading-relaxed"></p>
+        <div class="flex gap-2">
+          <button onclick="quizSwapHint()" class="chip !py-1.5">↔ สลับชื่อเพลง/ศิลปิน</button>
+          <button onclick="quizEditArtist()" class="chip !py-1.5">✎ แก้ศิลปิน</button>
+        </div>
         <div class="space-y-2">
           <p class="label">จำนวนข้อ</p>
           <div class="seg">
@@ -950,6 +968,8 @@ onValue(ref(db, `rooms/${roomId}/mode`), snap => {
   const m = snap.val() === 'quiz' ? 'quiz' : 'karaoke';
   const changed = !modeLoaded || m !== mode;
   mode = m; modeLoaded = true;
+  document.documentElement.classList.toggle('qmode', mode === 'quiz');
+  { const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = mode === 'quiz' ? '#050b1a' : '#0a0a12'; }
   if (isMain) {
     if (changed) applyMode();
   } else {
@@ -974,22 +994,22 @@ const TEAMS = { A: { name: 'ทีมแดง', emoji: '🔴', color: '#f43f5e'
 const QTYPES = { both: 'ทายชื่อเพลง + ศิลปิน', title: 'ทายชื่อเพลง', artist: 'ทายศิลปิน', lyric: 'ทายจากเนื้อเพลง' };
 const teamsOn = () => !!(quiz.game && quiz.game.teams);
 const qType = r => (r && r.type) || 'title';
-const gameType = () => (quiz.game && quiz.game.type) || 'title';
+const gameType = () => (quiz.game && quiz.game.type) || 'both';
 const cleanArtist = ch => String(ch || '').replace(/\s*-\s*topic$/i, '').replace(/\s*(official|vevo|channel)\b.*$/i, '').trim() || String(ch || '');
-const answerText = r => qType(r) === 'both' ? cleanTitle(r.title) + ' — ' + cleanArtist(r.artist || r.channel) : qType(r) === 'artist' ? cleanArtist(r.artist || r.channel) : cleanTitle(r.title);
+const answerText = r => { const h = hintParts(r), art = h.artist || cleanArtist(r.artist || r.channel); return qType(r) === 'both' ? h.title + ' — ' + art : qType(r) === 'artist' ? art : h.title; };
 const frozenAt = () => (quiz.buzz.length && quiz.buzz[0].at) ? quiz.buzz[0].at : null;      // มีคนกดแล้ว = หยุดนับเวลาที่ตอนที่กด
 const effNow = () => frozenAt() || srvNow();
 const qLeft = r => (r && r.startAt) ? Math.max(0, Math.ceil((r.startAt + (r.limit || 60) * 1000 + (r.extra || 0) - effNow()) / 1000)) : null;
 function teamWinner() { const a = quiz.teamScores.A || 0, b = quiz.teamScores.B || 0; return a === b ? null : (a > b ? 'A' : 'B'); }
-function teamBoard() {
+function teamBoard(big) {
   if (!teamsOn()) return '';
   return '<div class="grid grid-cols-2 gap-2 mb-3">' + ['A', 'B'].map(k => {
     const sc = quiz.teamScores[k] || 0, other = quiz.teamScores[k === 'A' ? 'B' : 'A'] || 0, t = TEAMS[k];
-    return `<div class="rounded-2xl px-3 py-2 text-center ${sc > other ? 'ring-2 ring-amber-300' : ''}" style="background:${t.color}33"><p class="text-xs md:text-base font-bold" style="color:${t.color}">${t.emoji} ${t.name}</p><p class="text-4xl md:text-6xl font-black text-white tabular-nums">${sc}</p></div>`;
+    return `<div class="rounded-2xl px-3 py-2 text-center ${sc > other ? 'ring-2 ring-amber-300' : ''}" style="background:${t.color}33"><p class="${big ? 'text-[22px]' : 'text-xs md:text-base'} font-bold" style="color:${t.color}">${t.emoji} ${t.name}</p><p class="${big ? 'text-[64px] leading-none' : 'text-4xl md:text-6xl'} font-black text-white tabular-nums">${sc}</p></div>`;
   }).join('') + '</div>';
 }
 const teamTag = id => (teamsOn() && quiz.teams[id]) ? TEAMS[quiz.teams[id]].emoji + ' ' : '';
-function cleanTitle(t) { const c = String(t || '').replace(/[\(\[\{【（].*?[\)\]\}】）]/g, '').replace(/official\s*(mv|audio|video|lyrics?)?/ig, '').replace(/\s+/g, ' ').trim(); return c || String(t || ''); }
+function cleanTitle(t) { const c = String(t || '').replace(/[「『〈《].*?[」』〉》]/g, '').replace(/#\S+/g, '').replace(/[\(\[\{【（].*?[\)\]\}】）]/g, '').replace(/official\s*(mv|audio|video|lyrics?)?/ig, '').replace(/\s+/g, ' ').trim(); return c || String(t || ''); }
 function maskTitle(t, reveal) {      // ◯ แทนตัวอักษร (ไม่นับสระ/วรรณยุกต์ที่ซ้อน) เผยตัวแรกเมื่อ reveal
   let out = '', shown = false;
   for (const ch of t) {
@@ -999,18 +1019,51 @@ function maskTitle(t, reveal) {      // ◯ แทนตัวอักษร (�
   }
   return out;
 }
-function quizHints(r) {      // คำใบ้ค่อย ๆ เผย (หยุดนับตอนมีคนกด): 25% / 50% จำนวนตัวอักษร / 75% ตัวแรก
+const normName = s => String(s || '').toLowerCase().replace(/[\s\-_.]/g, '');
+const hasThai = s => /[\u0E00-\u0E7F]/.test(s), latinOnly = s => !hasThai(s) && /[A-Za-z]/.test(s);
+const stripFeat = s => String(s || '').replace(/\s*[\(\[]?\s*\b(feat|ft|featuring)\b\.?.*$/i, '').trim();
+const LABEL_RE = /\b(music|records?|labels?|entertainment|studios?|media|pictures|productions?|network|tv|channel)\b|มิวสิค|เอนเตอร์เทนเมนต์|ค่าย/i;
+function splitVideoTitle(r) {      // คืน { title, artist, how } เสมอ · how: match=ตรงช่อง topic=ช่อง Topic channel=ใช้ช่องเป็นศิลปิน guess=เดาจากรูปแบบ unknown=ไม่ทราบศิลปิน
+  const chRaw = String(r.artist || r.channel || '').trim(), ch = cleanArtist(chRaw), nch = normName(ch), full = cleanTitle(r.title);
+  if (/-\s*topic$/i.test(chRaw) && ch) return { title: stripFeat(full), artist: ch, how: 'topic' };      // ช่อง Topic: ชื่อวิดีโอ = ชื่อเพลง, ช่อง = ศิลปิน
+  const noSplit = () => (!ch || LABEL_RE.test(chRaw)) ? { title: stripFeat(full), artist: '', how: 'unknown' } : { title: stripFeat(full), artist: stripFeat(ch), how: 'channel' };
+  const parts = full.split(/\s+[-–—|]\s+/).map(x => x.trim()).filter(Boolean);
+  if (parts.length < 2) return noSplit();
+  const idx = nch.length < 2 ? -1 : parts.findIndex(x => { const n = normName(x); return n === nch || (nch.length >= 3 && n.length >= 3 && (n.includes(nch) || nch.includes(n))); });
+  if (idx >= 0) {
+    const rest = parts.filter((_, i) => i !== idx).join(' - ').trim();
+    return rest.length >= 2 ? { title: stripFeat(rest), artist: stripFeat(parts[idx]), how: 'match' } : noSplit();
+  }
+  if (parts.length !== 2) return noSplit();
+  const [l, rt] = parts; let ai;
+  if (latinOnly(l) !== latinOnly(rt) && (hasThai(l) || hasThai(rt))) ai = latinOnly(l) ? 0 : 1;      // ฝั่งอังกฤษล้วน = ศิลปิน, ฝั่งที่มีไทย = ชื่อเพลง
+  else if (hasThai(l + rt)) ai = 1;      // เพลงไทยทั่วไป: "ชื่อเพลง - ศิลปิน"
+  else ai = 0;      // เพลงสากล: "Artist - Song"
+  const art = stripFeat(parts[ai]), ttl = stripFeat(parts[1 - ai]);
+  return art && ttl.length >= 2 ? { title: ttl, artist: art, how: 'guess' } : noSplit();
+}
+function hintParts(r) {      // ค่าที่แอดมินแก้เอง (ho) มาก่อนเสมอ
+  if (r && r.ho && r.ho.title) return { title: r.ho.title, artist: r.ho.artist || '', how: 'manual', known: !!r.ho.artist };
+  const sp = splitVideoTitle(r || {});
+  return { title: sp.title, artist: sp.artist, how: sp.how, known: !!sp.artist };
+}
+const hintSplitNote = r => {
+  const h = hintParts(r);
+  const tag = { match: '', topic: ' (ช่อง Topic)', channel: ' (ใช้ชื่อช่องเป็นศิลปิน เดา ตรวจดูด้วย)', guess: ' (เดาจากรูปแบบ ตรวจดูด้วย)', manual: ' (แอดมินแก้เอง)', unknown: '' }[h.how] || '';
+  return h.known ? `  |  คำใบ้${tag}: ชื่อ="${h.title}" ศิลปิน="${h.artist}"` : '  |  ⚠ ไม่ทราบศิลปิน (ช่องเป็นค่ายเพลง) กด ✎ ใส่ชื่อศิลปิน หรือข้ามเพลง';
+};
+function quizHints(r) {      // คำใบ้ขึ้นตามเวลา: 25% / 50% ขึ้นชื่อแบบเว้นตัวอักษร / 75% เปิดตัวแรก
   if (!r || !r.startAt) return [];
-  const lim = (r.limit || 60) * 1000, el = effNow() - r.startAt, out = [];
+  const lim = (r.limit || 60) * 1000, el = effNow() - r.startAt, out = [], hp = hintParts(r);
   if (qType(r) === 'both') {
-    if (el >= lim * 0.25) out.push('🔤 ชื่อเพลง: ' + maskTitle(cleanTitle(r.title), el >= lim * 0.5));
-    if (el >= lim * 0.5) out.push('🎤 ศิลปิน: ' + maskTitle(cleanArtist(r.artist || r.channel), el >= lim * 0.75));
+    if (el >= lim * 0.25) out.push('🔤 ชื่อเพลง: ' + maskTitle(hp.title, el >= lim * 0.5));
+    if (hp.known && el >= lim * 0.5) out.push('🎤 ศิลปิน: ' + maskTitle(hp.artist, el >= lim * 0.75));
   } else if (qType(r) === 'artist') {
-    if (el >= lim * 0.25) out.push('🎵 ชื่อเพลง: ' + cleanTitle(r.title));
-    if (el >= lim * 0.5) out.push('🔤 ศิลปิน/ช่อง: ' + maskTitle(answerText(r), el >= lim * 0.75));
+    if (el >= lim * 0.25) out.push('🎵 ชื่อเพลง: ' + hp.title);
+    if (hp.known && el >= lim * 0.5) out.push('🎤 ศิลปิน/ช่อง: ' + maskTitle(hp.artist, el >= lim * 0.75));
   } else {
-    if (el >= lim * 0.25) out.push('🎤 ช่อง/ศิลปิน: ' + (r.channel || '-'));
-    if (el >= lim * 0.5) out.push('🔤 ชื่อเพลง: ' + maskTitle(cleanTitle(r.title), el >= lim * 0.75));
+    if (el >= lim * 0.25) out.push('📺 ศิลปิน/ช่อง: ' + (hp.known ? hp.artist : (r.channel || '-')));
+    if (el >= lim * 0.5) out.push('🔤 ชื่อเพลง: ' + maskTitle(hp.title, el >= lim * 0.75));
   }
   return out;
 }
@@ -1037,10 +1090,16 @@ function clearBuzzResume() {      // ล้างคิว BUZZ แล้วเ�
   }
   guard(update(ref(db, `rooms/${roomId}/quiz`), upd));
 }
+let qcCoverVid = null;
 function renderQuizTimerMain() {
   const r = quiz.round, show = !!r && r.status === 'playing' && !quiz.game.over;
   $('qcTimer').classList.toggle('hidden', !show); $('qcHint').classList.toggle('hidden', !show);
-  if (!show) return;
+  $('qcCover').classList.toggle('hidden', !show);
+  if (!show) { qcCoverVid = null; return; }
+  if (qcCoverVid !== r.vid) { qcCoverVid = r.vid; $('qcCoverImg').src = thumb(r.vid); }
+  { const lf = qLeft(r), remMs = r.startAt ? r.startAt + (r.limit || 60) * 1000 + (r.extra || 0) - effNow() : null;      // ภาพปกเบลอตลอดข้อ แล้วค่อย ๆ ชัดใน 10 วินาทีสุดท้าย
+    const px = (lf === null || remMs === null || remMs > 10000) ? 36 : Math.max(0, 36 * remMs / 10000);
+    $('qcCoverImg').style.filter = `blur(${px.toFixed(1)}px)`; }
   const left = qLeft(r), frozen = !!frozenAt(), low = !frozen && left !== null && left <= 10;
   $('qcTimer').textContent = left === null ? '⏱ …' : `${frozen ? '⏸' : '⏱'} ${left}`;
   $('qcTimer').classList.toggle('text-rose-400', low); $('qcTimer').classList.toggle('text-amber-300', !low); $('qcTimer').classList.toggle('animate-pulse', low);
@@ -1115,23 +1174,30 @@ function quizMainSync(prev) {
     else if (prev.buzz.length && !quiz.buzz.length) { try { player.playVideo(); } catch {} }
   }
 }
+function fitQuizStage() { const s = Math.min(innerWidth / 1920, innerHeight / 1080); document.querySelectorAll('.qz-stage').forEach(el => { el.style.transform = `translate(-50%,-50%) scale(${s})`; }); }
+window.addEventListener('resize', fitQuizStage); fitQuizStage();
 function renderQuizMain() {
+  fitQuizStage();
   const on = mode === 'quiz', r = quiz.round, rev = !!r && r.status === 'revealed';
   renderQuizSummary(on);
   $('quizHud').classList.toggle('hidden', !on || !!quiz.game.over);
   $('quizCover').classList.toggle('hidden', !on || rev);
   $('quizBanner').classList.toggle('hidden', !on || !rev);
   if (!on) return;
-  if (rev) { const ty = qType(r); $('qbTitle').textContent = ty === 'artist' ? answerText(r) : r.title; $('qbSub').textContent = ty === 'artist' ? 'เพลง: ' + r.title : ty === 'both' ? '🎤 ' + cleanArtist(r.artist || r.channel) : (r.channel || ''); $('qbTag').textContent = (r.timeout ? '⏰ หมดเวลา · เฉลย' : '✅ เฉลย') + (ty === 'artist' ? ' (ศิลปิน/ช่อง)' : ty === 'both' ? ' (ชื่อเพลง + ศิลปิน)' : ''); }
+  if (rev) { const ty = qType(r); const hp = hintParts(r); $('qbTitle').textContent = ty === 'artist' ? answerText(r) : hp.title; $('qbSub').textContent = ty === 'artist' ? 'เพลง: ' + hp.title : (hp.known ? '🎤 ' + hp.artist : (r.channel || '')); $('qbTag').textContent = (r.timeout ? '⏰ หมดเวลา · เฉลย' : '✅ เฉลย') + (ty === 'artist' ? ' (ศิลปิน/ช่อง)' : ty === 'both' ? ' (ชื่อเพลง + ศิลปิน)' : ''); }
   $('qcRound').textContent = r ? `🎯 ${QTYPES[qType(r)]} · ข้อที่ ${r.no || 1}${qTotal() ? '/' + qTotal() : ''}` : '🎯 ทายเพลง';
-  $('qcQrWrap').classList.toggle('hidden', quiz.buzz.length > 0);
+  { const lobby = !r, w = $('qcQrWrap'), q = $('qrQuiz');
+    w.classList.toggle('hidden', quiz.buzz.length > 0); w.style.justifyContent = lobby ? 'center' : 'flex-end';
+    q.style.width = q.style.height = (lobby ? 300 : 150) + 'px'; $('qrQuizCap').style.fontSize = (lobby ? 26 : 18) + 'px'; $('qrQuizCap').textContent = lobby ? '📱 สแกนเพื่อเข้าร่วมและใส่ชื่อ' : '📱 สแกนเข้าร่วม';
+    $('qcCenter').style.top = lobby ? '130px' : '280px'; $('qcCenter').style.bottom = lobby ? '440px' : '270px';
+    $('hudBuzz').classList.toggle('hidden', lobby); }
   const pEntries = livePlayers();
   const showLobby = !r && pEntries.length > 0;
   $('qcPlayers').classList.toggle('hidden', !showLobby);
   if (showLobby) {
     $('qcPlayers').innerHTML = pEntries.map(([id, p]) => {
       const tm = teamsOn() && quiz.teams[id] ? TEAMS[quiz.teams[id]].emoji + ' ' : '';
-      return `<span class="pill px-4 py-1.5 text-base md:text-xl font-semibold text-white border border-white/15 bg-white/10">👤 ${tm}${esc(p.name)}</span>`;
+      return `<span class="pill px-[22px] py-[8px] text-[28px] font-semibold text-white border border-white/15 bg-white/10">👤 ${tm}${esc(p.name)}</span>`;
     }).join('');
   }
   if (!r) {
@@ -1152,14 +1218,14 @@ function renderQuizMain() {
   }
   $('hudBuzz').innerHTML = [0, 1].map(i => {
     const b = quiz.buzz[i];
-    if (!b) return `<div class="rounded-3xl border-2 border-dashed border-white/20 px-6 py-4 min-w-[12rem] md:min-w-[17rem] text-slate-400"><p class="text-xs md:text-base font-semibold tracking-widest">คนที่ ${i + 1}</p><p class="text-2xl md:text-4xl font-bold mt-1">${i === 1 && quiz.buzz.length === 1 && !buzzWindowOpen() ? 'ปิดรับแล้ว' : 'รอคนกด…'}</p></div>`;
+    if (!b) return `<div class="rounded-[28px] border-2 border-dashed border-white/20 px-[28px] py-[16px] min-w-0 text-slate-400"><p class="text-[18px] font-semibold tracking-widest">คนที่ ${i + 1}</p><p class="text-[34px] font-bold mt-1">${i === 1 && quiz.buzz.length === 1 && !buzzWindowOpen() ? 'ปิดรับแล้ว' : 'รอคนกด…'}</p></div>`;
     const tone = b.judged === '+' ? 'ring-emerald-400 bg-emerald-500/25' : b.judged === '-' ? 'ring-rose-400 bg-rose-500/25' : i === 0 ? 'ring-amber-300 bg-amber-400/20 animate-pulse' : 'ring-sky-300 bg-sky-400/15';
     const mark = b.judged === '+' ? '✅' : b.judged === '-' ? '❌' : '🔔';
-    return `<div class="glass rounded-3xl ring-4 ${tone} px-6 py-4 min-w-[12rem] md:min-w-[17rem]"><p class="text-xs md:text-base font-semibold tracking-widest text-white/80">${mark} คนที่ ${i + 1}${b.team ? ' · ' + TEAMS[b.team].emoji + TEAMS[b.team].name : ''}</p><p class="text-3xl md:text-6xl font-extrabold text-white mt-1 truncate max-w-[16rem] md:max-w-[22rem]">${esc(b.name)}</p></div>`;
+    return `<div class="glass rounded-[28px] ring-4 ${tone} px-[28px] py-[16px] min-w-0"><p class="text-[18px] font-semibold tracking-widest text-white/80">${mark} คนที่ ${i + 1}${b.team ? ' · ' + TEAMS[b.team].emoji + TEAMS[b.team].name : ''}</p><p class="text-[58px] leading-tight font-extrabold text-white mt-1 truncate">${esc(b.name)}</p></div>`;
   }).join('');
   scheduleWindowRefresh(renderQuizMain);
   renderQuizTimerMain();
-  $('hudScores').innerHTML = teamBoard() + (quiz.scores.length ? quiz.scores.slice(0, 8).map((p, i) => `<div class="flex items-center justify-between gap-3 rounded-2xl px-4 py-2 ${i === 0 ? 'bg-amber-400/15' : 'bg-white/5'}"><span class="truncate text-xl md:text-3xl font-bold text-white">${['🥇', '🥈', '🥉'][i] || `<span class="inline-block w-8 text-slate-500">${i + 1}</span>`} ${teamTag(p.id)}${esc(p.name)}</span><span class="text-3xl md:text-5xl font-black text-amber-300 tabular-nums">${p.score}</span></div>`).join('') : '<p class="text-lg md:text-2xl text-slate-500 py-4 text-center">ยังไม่มีคะแนน</p>');
+  $('hudScores').innerHTML = teamBoard(true) + (quiz.scores.length ? quiz.scores.slice(0, 8).map((p, i) => `<div class="flex items-center justify-between gap-3 rounded-[18px] px-[16px] py-[8px] ${i === 0 ? 'bg-amber-400/15' : 'bg-white/5'}"><span class="truncate text-[30px] font-bold text-white">${['🥇', '🥈', '🥉'][i] || `<span class="inline-block w-[34px] text-slate-500">${i + 1}</span>`} ${teamTag(p.id)}${esc(p.name)}</span><span class="text-[46px] font-black text-amber-300 tabular-nums">${p.score}</span></div>`).join('') : '<p class="text-[24px] text-slate-500 py-4 text-center">ยังไม่มีคะแนน</p>');
 }
 
 /* ======= เสียงเอฟเฟกต์ ======= */
@@ -1388,6 +1454,7 @@ function saveSearchLib(kind, arr) {      // เก็บผลค้นหาท
   });
   if (Object.keys(upd).length) update(ref(db, 'lib/' + kind), upd).catch(() => {});
 }
+if (!isMain) setTimeout(() => loadLib('q'), 1500);      // โหลดคลังเกมทายเพลงไว้ก่อน เพื่อใช้ค่าชื่อ/ศิลปินที่เคยแก้ไว้
 function ytErr(e) {
   if (e.code === 'nokey') return 'ยังไม่ได้ตั้งค่า YouTube API Key — ตอนนี้วางลิงก์ YouTube ในช่องค้นหาเพื่อเพิ่มเพลงได้';
   if (e.code === 'quotaExceeded') return 'โควตาค้นหาของ YouTube วันนี้หมดแล้ว (รีเซ็ตทุกวัน) ลองวางลิงก์แทนได้';
@@ -1613,7 +1680,7 @@ function renderQuizPhone() {
   $('qAdmin').classList.toggle('hidden', !isAdmin);
   $('qPlayer').classList.toggle('hidden', isAdmin);
   const g = quiz.game || {}, tot = qTotal();
-  const ty = qType(r), revLine = r ? (ty === 'artist' ? `${answerText(r)} (เพลง: ${r.title})` : ty === 'both' ? answerText(r) : r.title) : '';
+  const ty = qType(r), revLine = r ? (ty === 'artist' ? `${answerText(r)} (เพลง: ${hintParts(r).title})` : answerText(r)) : '';
   $('qStatus').textContent = g.over ? `🏁 จบเกมแล้ว · ${winnerText()}` : !r ? '⏳ รอแอดมินเลือก/สุ่มเพลง...' : rev ? (r.timeout ? `⏰ หมดเวลา · เฉลย: ${revLine}` : `✅ เฉลย: ${revLine}`) : quiz.buzz.length ? `🔔 ${quiz.buzz[0].name} กดก่อน!` : `${QTYPES[ty]} · ข้อที่ ${r.no || 1}${tot ? '/' + tot : ''}${ty === 'lyric' ? `\n“${r.clue}”` : ''}\nใครรู้กด BUZZ!`;
   const pEntries = livePlayers();
   $('qLobbyBox').classList.toggle('hidden', !!r || pEntries.length === 0);
@@ -1632,8 +1699,9 @@ function renderQuizPhone() {
   scheduleWindowRefresh(renderQuizPhone);
   renderQuizTimerPhone();
   renderPrepList();
+  if (quiz.game && quiz.game.cat) { quizCat = quiz.game.cat; const cs = $('quizCatSel'); if (cs && cs.value !== quizCat) cs.value = quizCat; }
   document.querySelectorAll('[data-cfg]').forEach(b => { const k = b.dataset.cfg; b.dataset.on = String(k === 'total' ? qTotal() : k === 'limit' ? qLimit() : k === 'type' ? gameType() : (teamsOn() ? '1' : '0')) === b.dataset.val ? '1' : '0'; });
-  $('qSecret').textContent = r ? `${QTYPES[ty]} · คำตอบ: ${ty === 'artist' ? answerText(r) + ' (เพลง: ' + r.title + ')' : ty === 'both' ? answerText(r) : r.title} — ${r.channel || ''}${ty === 'lyric' ? ` · เนื้อ: “${r.clue}”` : ''} (เริ่มที่ ${fmt(r.start)} จาก ${fmt(r.dur)})` : 'เลือกสุ่มเพลงจากชาร์ต หรือค้นหาเพลงเองด้านล่าง';
+  $('qSecret').textContent = r ? `${QTYPES[ty]} · คำตอบ: ${answerText(r)}${hintSplitNote(r)} — ${r.channel || ''}${ty === 'lyric' ? ` · เนื้อ: “${r.clue}”` : ''} (เริ่มที่ ${fmt(r.start)} จาก ${fmt(r.dur)})` : 'เลือกสุ่มเพลงจากชาร์ต หรือค้นหาเพลงเองด้านล่าง';
   $('qBuzz').innerHTML = quiz.buzz.length ? quiz.buzz.map((b, i) => `<div class="flex items-center gap-2 p-2 rounded-xl bg-slate-900 border ${i === 0 ? 'border-amber-400/60' : 'border-slate-800'}">
     <span class="w-5 text-xs text-slate-500">${i + 1}</span><span class="flex-1 text-sm truncate">${b.team ? TEAMS[b.team].emoji + ' ' : ''}${esc(b.name)}</span>
     ${b.judged ? (b.judged === '+' ? `<span class="text-xs">✅ +${b.pts || 1}</span>` : '<span class="text-xs">❌ ผิด</span>')
@@ -1672,7 +1740,7 @@ function quizBlocked() {
 let quizSrcMode = 'rand', quizCat = 'top';
 const prepRef = () => ref(db, `rooms/${roomId}/quiz/prep`);
 async function randomQuizItem(exclude = []) {
-  const pool = await getCategoryPool(quizCat);
+  const pool = await getCategoryPool((quiz.game && quiz.game.cat) || quizCat);
   const taken = new Set([...quiz.prep.map(p => p.vid), ...exclude, ...(quiz.round ? [quiz.round.vid] : [])]);
   let left = pool.filter(x => !qUsed.has(x.vid) && !taken.has(x.vid));
   if (!left.length) { qUsed.clear(); left = pool.filter(x => !taken.has(x.vid)); }
@@ -1689,7 +1757,7 @@ async function addRandomPrep(n) {
 function startRound(p, prepId, keepNo) {
   saveLib('q', p);
   const start = Math.round((p.dur || 180) * (0.28 + Math.random() * 0.06));      // ประมาณช่วงก่อนฮุก
-  const upd = { round: { type: p.type || gameType(), clue: p.clue || '', vid: p.vid, title: p.title, channel: p.channel || '', dur: p.dur || 180, start, status: 'playing', n: Date.now(), no: keepNo && quiz.round ? (quiz.round.no || 1) : ((quiz.round && quiz.round.no) || 0) + 1, limit: qLimit() }, buzz: null };
+  const upd = { round: { type: p.type || gameType(), clue: p.clue || '', vid: p.vid, title: p.title, channel: p.channel || '', dur: p.dur || 180, ho: p.ho || ((libCache.q && libCache.q.items[p.vid] && libCache.q.items[p.vid].ho) || null), start, status: 'playing', n: Date.now(), no: keepNo && quiz.round ? (quiz.round.no || 1) : ((quiz.round && quiz.round.no) || 0) + 1, limit: qLimit() }, buzz: null };
   if (prepId) upd['prep/' + prepId] = null;
   guard(update(ref(db, `rooms/${roomId}/quiz`), upd));
   if (quizSrcMode === 'rand' && quiz.prep.length - (prepId ? 1 : 0) < 1) addRandomPrep(1).catch(() => {});      // เตรียมข้อถัดไปไว้ให้จอหลักโหลดรอ
@@ -1780,8 +1848,8 @@ async function drawResultImage() {
   try { await document.fonts.load('700 48px Prompt'); await document.fonts.load('400 32px Prompt'); } catch {}
   const W = 1080, H = 1440, c = document.createElement('canvas'); c.width = W; c.height = H;
   const x = c.getContext('2d');
-  const bg = x.createLinearGradient(0, 0, W, H); bg.addColorStop(0, '#2a1250'); bg.addColorStop(1, '#0a0a12'); x.fillStyle = bg; x.fillRect(0, 0, W, H);
-  [[160, 200, 520, 'rgba(255,79,139,.40)'], [940, 1260, 560, 'rgba(139,92,246,.40)']].forEach(([cx, cy, r, col]) => { const g = x.createRadialGradient(cx, cy, 0, cx, cy, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, W, H); });
+  const bg = x.createLinearGradient(0, 0, W, H); bg.addColorStop(0, '#0c2d5c'); bg.addColorStop(1, '#050b1a'); x.fillStyle = bg; x.fillRect(0, 0, W, H);
+  [[160, 200, 520, 'rgba(6,182,212,.40)'], [940, 1260, 560, 'rgba(37,99,235,.40)']].forEach(([cx, cy, r, col]) => { const g = x.createRadialGradient(cx, cy, 0, cx, cy, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, W, H); });
   const rr = (px, py, w, h, r) => { x.beginPath(); x.moveTo(px + r, py); x.arcTo(px + w, py, px + w, py + h, r); x.arcTo(px + w, py + h, px, py + h, r); x.arcTo(px, py + h, px, py, r); x.arcTo(px, py, px + w, py, r); x.closePath(); };
   const fit = (t, maxW) => { let o = t; while (x.measureText(o).width > maxW && o.length > 1) o = o.slice(0, -1); return o === t ? t : o + '…'; };
   x.textAlign = 'center'; x.fillStyle = '#fff'; x.font = '700 66px Prompt, sans-serif'; x.fillText('🎤 Party Karaoke', W / 2, 120);
@@ -1838,7 +1906,7 @@ window.prepFillRandom = async () => {
   toast('กำลังสุ่ม 5 ข้อ...');
   try { const n = await addRandomPrep(5); toast(n ? `เพิ่มข้อสุ่ม ${n} ข้อแล้ว` : 'ไม่พบเพลงในแหล่งนี้'); } catch (e) { toast(ytErr(e)); }
 };
-window.setQuizCat = k => { quizCat = k; };
+window.setQuizCat = k => { quizCat = k; if (quiz.adminId === cid) guard(update(ref(db, `rooms/${roomId}/quiz/game`), { cat: k })); };      // ซิงค์หมวดไปให้จอทีวีใช้ตอนสุ่มเพลงแทน
 function fillQuizCats() { const sel = $('quizCatSel'); if (sel) sel.innerHTML = CATS.map(c => `<option value="${c.k}">${c.label}</option>`).join(''); }
 fillQuizCats();
 function renderPrepList() {
@@ -1850,6 +1918,26 @@ window.setQuizCfg = (k, v) => { if (quiz.adminId === cid) guard(update(ref(db, `
 window.quizFinish = () => { if (quiz.adminId === cid) guard(update(ref(db, `rooms/${roomId}/quiz/game`), { over: true })); };
 window.quizNewGame = () => { if (quiz.adminId !== cid || !confirm('เริ่มเกมใหม่? ข้อและคะแนนทั้งหมดจะถูกล้าง')) return; guard(update(ref(db, `rooms/${roomId}/quiz`), { round: null, buzz: null, scores: null, teamScores: null, 'game/over': false })); };
 window.quizReveal = () => { if (quiz.adminId === cid && quiz.round) guard(update(ref(db, `rooms/${roomId}/quiz/round`), { status: 'revealed' })); };
+function saveHintOverride(ho) {      // แก้ชื่อ/ศิลปินของข้อนี้ + จำไว้ในคลังเพื่อให้ครั้งหน้าถูกเอง
+  const r = quiz.round; if (!r) return;
+  guard(update(ref(db, `rooms/${roomId}/quiz/round`), { ho }));
+  guard(update(ref(db, `lib/q/${r.vid}`), { ho, title: r.title, channel: r.channel || '', st: Date.now(), ...(r.dur ? { dur: r.dur } : {}) }));
+  if (libCache.q) libCache.q.items[r.vid] = { ...(libCache.q.items[r.vid] || { title: r.title, channel: r.channel || '' }), ho };
+}
+window.quizSwapHint = () => {
+  const r = quiz.round; if (quiz.adminId !== cid || !r) return;
+  const h = hintParts(r);
+  if (!h.known) return toast('ยังไม่ทราบศิลปิน กด ✎ แก้ศิลปิน เพื่อใส่ชื่อ');
+  saveHintOverride({ title: h.artist, artist: h.title });
+  toast('สลับชื่อเพลง/ศิลปินแล้ว (จำไว้ให้ครั้งหน้า)');
+};
+window.quizEditArtist = () => {
+  const r = quiz.round; if (quiz.adminId !== cid || !r) return;
+  const h = hintParts(r), v = prompt('ชื่อศิลปินที่ถูกต้อง', h.artist || '');
+  if (v === null || !v.trim()) return;
+  saveHintOverride({ title: h.title, artist: v.trim() });
+  toast('บันทึกชื่อศิลปินแล้ว (จำไว้ให้ครั้งหน้า)');
+};
 window.quizAdjust = (pid, d) => {      // แอดมินเพิ่ม/ลดคะแนนเอง (ถ้าเล่นแบบทีม คะแนนทีมของคนนั้นขยับตาม)
   if (quiz.adminId !== cid || !d) return;
   const nm = (quiz.scores.find(x => x.id === pid) || {}).name || (quiz.players[pid] || {}).name || 'ผู้เล่น';
