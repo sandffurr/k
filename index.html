@@ -624,8 +624,8 @@ onValue(reactionRef, snap => {
 /* ======= การเล่น / คิว (ใช้ร่วมกัน) ======= */
 let chartPool = [], autoUsed = new Set(), autoTimer = null, autoSkipTimer = null, autoToastShown = false;
 const CATS = [
-  { k: 'top', label: '🔥 ท็อปชาร์ต' }, { k: 'tiktok', label: '📱 ฮิตในติ๊กตอก', q: 'เพลงฮิต TikTok ไทย ล่าสุด' },
-  { k: 'd20', label: 'ยุค 2020', q: 'เพลงฮิต 2020 ไทย ล่าสุด' }, { k: 'd10', label: 'ยุค 2010', q: 'เพลงฮิต ยุค 2010 ไทย' }, { k: 'd00', label: 'ยุค 2000', q: 'เพลงฮิต ยุค 2000 ไทย' }, { k: 'd90', label: 'ยุค 90', q: 'เพลงฮิต ยุค 90 ไทย' }, { k: 'd80', label: 'ยุค 80', q: 'เพลงฮิต ยุค 80 ไทย' }, { k: 'old', label: 'เพลงเก่า/ลูกกรุง', q: 'เพลงเก่า ลูกกรุง ฮิต' },
+  { k: 'top', label: '🔥 ท็อปชาร์ต' }, { k: 'tiktok', label: '📱 ฮิตในติ๊กตอก', q: 'เพลงในติ๊กตอก เพลงไวรัล TikTok ไทย' },
+  { k: 'd20', label: 'ยุค 2020', q: 'รวมเพลงไทย ปี 2020 2021 2022 2023' }, { k: 'd10', label: 'ยุค 2010', q: 'เพลงฮิต ยุค 2010 ไทย' }, { k: 'd00', label: 'ยุค 2000', q: 'เพลงฮิต ยุค 2000 ไทย' }, { k: 'd90', label: 'ยุค 90', q: 'เพลงฮิต ยุค 90 ไทย' }, { k: 'd80', label: 'ยุค 80', q: 'เพลงฮิต ยุค 80 ไทย' }, { k: 'old', label: 'เพลงเก่า/ลูกกรุง', q: 'เพลงเก่า ลูกกรุง ฮิต' },
   { k: 'pop', label: 'ป๊อป', q: 'เพลงป๊อป ไทย ฮิต' }, { k: 'rock', label: 'ร็อก', q: 'เพลงร็อก ไทย ฮิต' }, { k: 'indie', label: 'อินดี้', q: 'เพลงอินดี้ ไทย ฮิต' }, { k: 'hip', label: 'ฮิปฮอป', q: 'เพลงฮิปฮอป แร็พ ไทย ฮิต' }, { k: 'lt', label: 'ลูกทุ่ง', q: 'เพลงลูกทุ่ง ฮิต' }, { k: 'molam', label: 'หมอลำ/อีสาน', q: 'หมอลำ เพลงอีสาน ฮิต' },
   { k: 'love', label: '💕 เพลงรัก', q: 'เพลงรัก ไทย โรแมนติก ฮิต' }, { k: 'slow', label: 'เพลงช้า', q: 'เพลงช้า เพลงเศร้า ไทย ฮิต' }, { k: 'dance', label: 'เพลงสนุก', q: 'เพลงสนุก เต้น ปาร์ตี้ ไทย' }, { k: 'acoustic', label: '🎸 อะคูสติก', q: 'เพลงอะคูสติก ไทย ฮิต' }, { k: 'drama', label: '📺 เพลงประกอบละคร', q: 'เพลงประกอบละคร ฮิต' },
   { k: 'kpop', label: '🇰🇷 K-POP', q: 'K-pop เพลงเกาหลี ฮิต' }, { k: 'kpop10', label: '🇰🇷 K-POP ยุคเก่า', q: 'K-pop เพลงเกาหลี ยุค 2010 ฮิต' }, { k: 'jpop', label: '🇯🇵 J-POP', q: 'J-pop เพลงญี่ปุ่น ฮิต' }, { k: 'anime', label: '🎌 อนิเมะ', q: 'เพลงอนิเมะ ฮิต anime songs' }, { k: 'cpop', label: '🇨🇳 จีน/ไต้หวัน', q: 'เพลงจีน ฮิต Mandopop' }, { k: 'int', label: 'สากล', q: 'เพลงสากล ฮิต' }, { k: 'uspop', label: '🇺🇸 สากลป๊อป', q: 'English pop hits US UK' }, { k: 'rnb', label: 'R&B / โซล', q: 'R&B soul hits' }, { k: 'edm', label: 'EDM', q: 'EDM dance hits' }, { k: 'latin', label: 'ลาติน', q: 'Latin pop reggaeton hits' }
@@ -642,11 +642,12 @@ async function readSharedCat(k) {
 }
 async function fetchCategory(k, force) {      // ท็อปชาร์ต = เพลงมาแรงหมวดดนตรี / หมวดอื่น = เพลย์ลิสต์ยอดนิยมที่ค้นเจอบน YouTube
   const okE = e => e && e.items && e.items.length, fresh = e => okE(e) && Date.now() - e.t < CAT_TTL;
-  const loc = readCatRaw(k); let stale = okE(loc) ? loc : null;
+  const cat0 = CATS.find(c => c.k === k), ck = (k === 'top' || !cat0) ? k : k + '_' + ytHash(cat0.q).slice(0, 6);
+  const loc = readCatRaw(ck); let stale = okE(loc) ? loc : null;
   if (!force) {
     if (fresh(loc)) return loc.items;
-    const sh = await readSharedCat(k);
-    if (fresh(sh)) { writeCatCache(k, sh.items, sh.t); return sh.items; }
+    const sh = await readSharedCat(ck);
+    if (fresh(sh)) { writeCatCache(ck, sh.items, sh.t); return sh.items; }
     if (okE(sh) && (!stale || sh.t > stale.t)) stale = sh;
   }
   const mk = v => ({ vid: v.id, title: dec(v.snippet.title), channel: dec(v.snippet.channelTitle), dur: isoSec(v.contentDetails.duration) });
@@ -671,8 +672,8 @@ async function fetchCategory(k, force) {      // ท็อปชาร์ต = �
     }
   } catch (e) { if (stale) return stale.items; throw e; }
   if (songs.length) {
-    const t = Date.now(); writeCatCache(k, songs, t);
-    set(ref(db, `charts/${k}_${CHART_REGION}`), { t, d: JSON.stringify(songs) }).catch(() => {});      // แชร์ให้ทุกเครื่อง/ทุกห้อง
+    const t = Date.now(); writeCatCache(ck, songs, t);
+    set(ref(db, `charts/${ck}_${CHART_REGION}`), { t, d: JSON.stringify(songs) }).catch(() => {});      // แชร์ให้ทุกเครื่อง/ทุกห้อง
   } else if (stale) return stale.items;
   return songs;
 }
