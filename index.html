@@ -49,6 +49,12 @@ html.lite [class*="backdrop-blur"]{backdrop-filter:none!important;-webkit-backdr
 .chip:hover{background:var(--surfh)}
 .ibtn{width:44px;height:44px;border-radius:999px;display:grid;place-items:center;background:rgb(var(--s800));font-size:1.05rem}
 .label{font-size:11px;color:var(--mut2);font-weight:500;letter-spacing:.02em}
+.sec-sum{display:flex;align-items:center;justify-content:space-between;padding:1rem;font-size:.875rem;font-weight:600;cursor:pointer;list-style:none}
+.sec-sum::-webkit-details-marker{display:none}
+details>summary{list-style:none}
+.sec-arrow{transition:transform .2s;color:var(--mut)}
+details[open]>summary .sec-arrow{transform:rotate(180deg)}
+.chip[data-on="1"]{background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff}
 .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;padding:4px;background:var(--seg);border-radius:14px}
 .seg>button{padding:.5rem;border-radius:10px;font-size:.75rem;font-weight:600;color:var(--mut)}
 .seg>button[data-on="1"]{background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff}
@@ -188,7 +194,7 @@ html.lite [class*="backdrop-blur"]{backdrop-filter:none!important;-webkit-backdr
     <div class="flex items-center justify-between gap-3">
       <div class="min-w-0 flex-1">
         <h1 class="font-extrabold text-lg tracking-tight leading-tight whitespace-nowrap">🎤 Party<span class="grad-text">Karaoke</span></h1>
-        <p class="flex items-center gap-1.5 text-[11px] text-slate-400 leading-tight mt-0.5"><span id="connDot" class="w-2 h-2 rounded-full bg-slate-500 shrink-0"></span><span id="roomLabel" class="truncate"></span></p>
+        <p class="flex items-center gap-1.5 text-[11px] text-slate-400 leading-tight mt-0.5"><span id="connDot" class="w-2 h-2 rounded-full bg-slate-500 shrink-0"></span><span id="roomLabel" class="truncate"></span><span id="tvDot" class="text-[11px] shrink-0" title="สถานะจอทีวี">⚪</span></p>
       </div>
       <div class="flex items-center gap-2 shrink-0">
         <input id="nameInput" placeholder="ชื่อของคุณ" maxlength="20" class="w-24 pill px-3 py-2 text-xs outline-none border border-transparent focus:border-pink-500 placeholder:text-slate-500">
@@ -210,96 +216,117 @@ html.lite [class*="backdrop-blur"]{backdrop-filter:none!important;-webkit-backdr
     <div id="pane-queue" class="hidden space-y-2"></div>
     <div id="pane-hist" class="hidden space-y-2"></div>
     <div id="pane-control" class="hidden space-y-3">
-      <div class="card p-4 space-y-2.5">
-        <p class="label">โหมดเกม</p>
-        <div class="seg">
-          <button class="mode-btn" data-mode="karaoke" onclick="setMode('karaoke')">🎤 คาราโอเกะ</button>
-          <button class="mode-btn" data-mode="quiz" onclick="setMode('quiz')">🎯 ทายเพลง</button>
-        </div>
-      </div>
       <div class="card p-4 space-y-3">
-        <p class="label">เลื่อนเวลาเพลง</p>
-        <div class="flex items-center gap-2 text-[11px] text-slate-400">
-          <span id="tCur" class="w-9 text-right tabular-nums">0:00</span>
-          <input id="seek" type="range" min="0" max="100" step="0.1" value="0" class="flex-1 accent-pink-500" oninput="seekDrag(this.value)" onchange="seekTo(this.value)">
-          <span id="tDur" class="w-9 tabular-nums">0:00</span>
-        </div>
-        <div class="grid grid-cols-5 gap-1.5">
-          <button onclick="seekBy(-30)" class="chip">−30</button>
-          <button onclick="seekBy(-10)" class="chip">−10</button>
-          <button onclick="restartSong()" class="chip">เริ่มใหม่</button>
-          <button onclick="seekBy(10)" class="chip">+10</button>
-          <button onclick="seekBy(30)" class="chip">+30</button>
-        </div>
-      </div>
-      <div class="card p-4 space-y-3">
-        <p class="label">เสียงเอฟเฟกต์ · ดังที่จอหลัก</p>
-        <div class="grid grid-cols-5 gap-1.5 text-[10px] text-slate-300">
-          <button onclick="sfx('clap')" class="chip !px-0"><span class="text-2xl block">👏</span>ปรบมือ</button>
-          <button onclick="sfx('horn')" class="chip !px-0"><span class="text-2xl block">📯</span>แตร</button>
-          <button onclick="sfx('drum')" class="chip !px-0"><span class="text-2xl block">🥁</span>กลองรัว</button>
-          <button onclick="sfx('whistle')" class="chip !px-0"><span class="text-2xl block">🎉</span>ฮิ้ว</button>
-          <button onclick="sfx('buzz')" class="chip !px-0"><span class="text-2xl block">📢</span>บัซเซอร์</button>
-        </div>
-        <div class="flex justify-between pt-1 border-t border-white/5">
-          <button onclick="sendReaction('🔥')" class="flex-1 text-3xl py-2 active:scale-125 transition">🔥</button>
-          <button onclick="sendReaction('👏')" class="flex-1 text-3xl py-2 active:scale-125 transition">👏</button>
-          <button onclick="sendReaction('🎤')" class="flex-1 text-3xl py-2 active:scale-125 transition">🎤</button>
-          <button onclick="sendReaction('🍻')" class="flex-1 text-3xl py-2 active:scale-125 transition">🍻</button>
-        </div>
-      </div>
-      <div class="card p-4 space-y-3">
-        <div class="flex items-center justify-between"><p class="label">ระดับเสียงจอหลัก</p><span id="volLabel" class="text-sm font-bold text-white tabular-nums">100%</span></div>
-        <div class="flex items-center gap-2">
-          <button onclick="volBy(-10)" class="chip !px-4">−</button>
-          <input id="volSlider" type="range" min="0" max="100" step="5" value="100" class="flex-1 accent-pink-500" oninput="volDrag(this.value)" onchange="volSet(this.value)">
-          <button onclick="volBy(10)" class="chip !px-4">+</button>
-        </div>
-        <p class="label">ปรับเสียงเพลงและเอฟเฟกต์ที่ออกจากจอหลัก (เสียงจริงยังขึ้นกับระดับเสียงของทีวี/คอมด้วย)</p>
-      </div>
-      <div class="card p-4 space-y-3">
-        <p class="label">การแสดงผลบนจอหลัก</p>
-        <div class="flex items-center justify-between gap-3">
-          <div><p class="text-sm font-medium">แสดงคิวเพลงบนจอ</p><p class="label mt-0.5">รายการเพลงที่รออยู่ ด้านขวาของจอ</p></div>
-          <button id="uiQueueBtn" class="tgl" onclick="toggleUi('showQueue')">ปิด</button>
-        </div>
-        <div class="flex items-center justify-between gap-3">
-          <div><p class="text-sm font-medium">เตือนเพลงต่อไปเป็นระยะ</p><p class="label mt-0.5">ขึ้นทุก 1 นาที และช่วง 20 วินาทีสุดท้ายของเพลง</p></div>
-          <button id="uiPopupBtn" class="tgl" onclick="toggleUi('nextPopup')">เปิด</button>
-        </div>
-        <div class="flex items-center justify-between gap-3">
-          <div><p class="text-sm font-medium">เล่นเพลงสุ่มเมื่อคิวว่าง</p><p class="label mt-0.5">หยิบเพลงจากชาร์ต YouTube มาเล่นต่อเอง จอจะได้ไม่เงียบ</p></div>
-          <button id="uiAutoBtn" class="tgl" onclick="toggleUi('autoFill')">เปิด</button>
-        </div>
-        <div class="flex items-center justify-between gap-3">
-          <div><p class="text-sm font-medium">แสดง QR ค้างไว้มุมจอ</p><p class="label mt-0.5">ให้คนมาใหม่สแกนเข้าห้องได้ตลอด (ปุ่ม Q บนคีย์บอร์ดก็ได้)</p></div>
-          <button id="uiQrBtn" class="tgl" onclick="toggleUi('pinQR')">ปิด</button>
-        </div>
-        <div class="flex items-center justify-between gap-3">
-          <div><p class="text-sm font-medium">โหมดประหยัดเครื่อง (จอทีวี)</p><p class="label mt-0.5">ลดเบลอ/เอฟเฟกต์ และไม่โหลดเพลงถัดไปล่วงหน้า ช่วยลดอาการกระตุก (เพลงถัดไปจะโหลดช้าลง 1-3 วิ)</p></div>
-          <button id="uiLiteBtn" class="tgl" onclick="toggleUi('lite')">เปิด</button>
-        </div>
-        <div class="space-y-2">
-          <div><p class="text-sm font-medium">ความคมชัดวิดีโอบนจอทีวี</p><p class="label mt-0.5">720p ลื่นสุด · 1080p คมกว่า · เต็มจอ = ตามขนาดจอจริง (คมสุด แต่หนักสุด) ถ้าภาพกระตุกให้ลดลง</p></div>
+        <div class="flex items-center gap-2 text-sm font-medium"><span class="tvStatText flex-1">⚪ กำลังตรวจสอบจอทีวี...</span></div>
+        <div>
+          <p class="label mb-1.5">โหมดเกม</p>
           <div class="seg">
-            <button data-res-btn="720" onclick="setUiRes('720')">720p ลื่น</button>
-            <button data-res-btn="1080" onclick="setUiRes('1080')">1080p คม</button>
-            <button data-res-btn="auto" onclick="setUiRes('auto')">เต็มจอ</button>
+            <button class="mode-btn" data-mode="karaoke" onclick="setMode('karaoke')">🎤 คาราโอเกะ</button>
+            <button class="mode-btn" data-mode="quiz" onclick="setMode('quiz')">🎯 ทายเพลง</button>
           </div>
         </div>
-        <button onclick="popupNow()" class="chip w-full">แสดงเพลงต่อไปบนจอตอนนี้</button>
       </div>
-      <div class="card p-4 space-y-2.5">
-        <p class="label">แอปบนมือถือและห้องของคุณ</p>
-        <p class="text-sm text-slate-300">ห้องปัจจุบัน: <b id="pwaRoom" class="text-white"></b></p>
-        <p id="pwaText" class="text-sm text-slate-300">เปิดแบบเต็มจอไม่มีแถบเบราว์เซอร์ และจำห้องล่าสุดให้</p>
-        <button id="pwaBtn" onclick="installApp()" class="grad w-full py-3 rounded-2xl text-sm font-bold">ติดตั้งแอป</button>
-        <button onclick="changeRoom()" class="chip w-full">เปลี่ยนห้อง / ใส่รหัสห้องใหม่</button>
-      </div>
-      <div class="card p-4 flex items-center justify-between">
-        <div><p class="text-sm font-medium">💬 คำบรรยาย YouTube</p><p class="label mt-0.5">ซับไตเติลของวิดีโอบนจอหลัก</p></div>
-        <button id="ccBtn" onclick="toggleCC()">ปิด</button>
-      </div>
+
+      <details class="card" data-sec="play" open>
+        <summary class="sec-sum"><span>▶ เล่น · เสียง · เอฟเฟกต์</span><span class="sec-arrow">▾</span></summary>
+        <div class="px-4 pb-4 space-y-4">
+          <div class="space-y-3">
+            <p class="label">เลื่อนเวลาเพลง</p>
+            <div class="flex items-center gap-2 text-[11px] text-slate-400">
+              <span id="tCur" class="w-9 text-right tabular-nums">0:00</span>
+              <input id="seek" type="range" min="0" max="100" step="0.1" value="0" class="flex-1 accent-pink-500" oninput="seekDrag(this.value)" onchange="seekTo(this.value)">
+              <span id="tDur" class="w-9 tabular-nums">0:00</span>
+            </div>
+            <div class="grid grid-cols-5 gap-1.5">
+              <button onclick="seekBy(-30)" class="chip">−30</button>
+              <button onclick="seekBy(-10)" class="chip">−10</button>
+              <button onclick="restartSong()" class="chip">เริ่มใหม่</button>
+              <button onclick="seekBy(10)" class="chip">+10</button>
+              <button onclick="seekBy(30)" class="chip">+30</button>
+            </div>
+          </div>
+          <div class="space-y-3 pt-3 border-t border-white/5">
+            <div class="flex items-center justify-between"><p class="label">ระดับเสียงจอหลัก</p><span id="volLabel" class="text-sm font-bold text-white tabular-nums">100%</span></div>
+            <div class="flex items-center gap-2">
+              <button onclick="volBy(-10)" class="chip !px-4">−</button>
+              <input id="volSlider" type="range" min="0" max="100" step="5" value="100" class="flex-1 accent-pink-500" oninput="volDrag(this.value)" onchange="volSet(this.value)">
+              <button onclick="volBy(10)" class="chip !px-4">+</button>
+            </div>
+          </div>
+          <div class="space-y-3 pt-3 border-t border-white/5">
+            <p class="label">เสียงเอฟเฟกต์ · ดังที่จอหลัก</p>
+            <div class="grid grid-cols-5 gap-1.5 text-[10px] text-slate-300">
+              <button onclick="sfx('clap')" class="chip !px-0"><span class="text-2xl block">👏</span>ปรบมือ</button>
+              <button onclick="sfx('horn')" class="chip !px-0"><span class="text-2xl block">📯</span>แตร</button>
+              <button onclick="sfx('drum')" class="chip !px-0"><span class="text-2xl block">🥁</span>กลองรัว</button>
+              <button onclick="sfx('whistle')" class="chip !px-0"><span class="text-2xl block">🎉</span>ฮิ้ว</button>
+              <button onclick="sfx('buzz')" class="chip !px-0"><span class="text-2xl block">📢</span>บัซเซอร์</button>
+            </div>
+            <div class="flex justify-between pt-1">
+              <button onclick="sendReaction('🔥')" class="flex-1 text-3xl py-2 active:scale-125 transition">🔥</button>
+              <button onclick="sendReaction('👏')" class="flex-1 text-3xl py-2 active:scale-125 transition">👏</button>
+              <button onclick="sendReaction('🎤')" class="flex-1 text-3xl py-2 active:scale-125 transition">🎤</button>
+              <button onclick="sendReaction('🍻')" class="flex-1 text-3xl py-2 active:scale-125 transition">🍻</button>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <details class="card" data-sec="tv">
+        <summary class="sec-sum"><span>📺 จอทีวี</span><span class="sec-arrow">▾</span></summary>
+        <div class="px-4 pb-4 space-y-3">
+          <div class="space-y-2">
+            <p class="label">ชุดตั้งค่าสำเร็จรูป</p>
+            <div class="grid grid-cols-2 gap-2">
+              <button id="presetWeak" onclick="applyPreset('weak')" class="chip !py-3 leading-tight">🐢 ทีวีไม่แรง<span class="block label mt-0.5">ประหยัดเครื่อง · 720p</span></button>
+              <button id="presetFull" onclick="applyPreset('full')" class="chip !py-3 leading-tight">🚀 เต็มระบบ<span class="block label mt-0.5">เอฟเฟกต์ครบ · 1080p</span></button>
+            </div>
+          </div>
+          <div class="flex items-center justify-between gap-3">
+            <div><p class="text-sm font-medium">แสดงคิวเพลงบนจอ</p><p class="label mt-0.5">รายการเพลงที่รออยู่ ด้านขวาของจอ</p></div>
+            <button id="uiQueueBtn" class="tgl" onclick="toggleUi('showQueue')">ปิด</button>
+          </div>
+          <div class="flex items-center justify-between gap-3">
+            <div><p class="text-sm font-medium">เตือนเพลงต่อไปเป็นระยะ</p><p class="label mt-0.5">ขึ้นทุก 1 นาที และ 20 วินาทีสุดท้าย</p></div>
+            <button id="uiPopupBtn" class="tgl" onclick="toggleUi('nextPopup')">เปิด</button>
+          </div>
+          <div class="flex items-center justify-between gap-3">
+            <div><p class="text-sm font-medium">เล่นเพลงสุ่มเมื่อคิวว่าง</p><p class="label mt-0.5">หยิบเพลงจากชาร์ตมาเล่นต่อ จอไม่เงียบ</p></div>
+            <button id="uiAutoBtn" class="tgl" onclick="toggleUi('autoFill')">เปิด</button>
+          </div>
+          <div class="flex items-center justify-between gap-3">
+            <div><p class="text-sm font-medium">แสดง QR ค้างไว้มุมจอ</p><p class="label mt-0.5">ให้คนมาใหม่สแกนเข้าห้อง (ปุ่ม Q ก็ได้)</p></div>
+            <button id="uiQrBtn" class="tgl" onclick="toggleUi('pinQR')">ปิด</button>
+          </div>
+          <div class="flex items-center justify-between gap-3">
+            <div><p class="text-sm font-medium">โหมดประหยัดเครื่อง</p><p class="label mt-0.5">ลดเบลอ ไม่โหลดเพลงล่วงหน้า (เปลี่ยนเพลงช้าลง 1-3 วิ)</p></div>
+            <button id="uiLiteBtn" class="tgl" onclick="toggleUi('lite')">เปิด</button>
+          </div>
+          <div class="space-y-2">
+            <p class="text-sm font-medium">ความคมชัดวิดีโอ <span class="label">ถ้าภาพกระตุกให้ลดลง</span></p>
+            <div class="seg">
+              <button data-res-btn="720" onclick="setUiRes('720')">720p ลื่น</button>
+              <button data-res-btn="1080" onclick="setUiRes('1080')">1080p คม</button>
+              <button data-res-btn="auto" onclick="setUiRes('auto')">เต็มจอ</button>
+            </div>
+          </div>
+          <button onclick="popupNow()" class="chip w-full">แสดงเพลงต่อไปบนจอตอนนี้</button>
+        </div>
+      </details>
+
+      <details class="card" data-sec="room">
+        <summary class="sec-sum"><span>🏠 ห้อง · แอป · คำบรรยาย</span><span class="sec-arrow">▾</span></summary>
+        <div class="px-4 pb-4 space-y-3">
+          <p class="text-sm text-slate-300">ห้องปัจจุบัน: <b id="pwaRoom" class="text-white"></b></p>
+          <p id="pwaText" class="text-sm text-slate-300">เปิดแบบเต็มจอไม่มีแถบเบราว์เซอร์ และจำห้องล่าสุดให้</p>
+          <button id="pwaBtn" onclick="installApp()" class="grad w-full py-3 rounded-2xl text-sm font-bold">ติดตั้งแอป</button>
+          <button onclick="changeRoom()" class="chip w-full">เปลี่ยนห้อง / ใส่รหัสห้องใหม่</button>
+          <div class="flex items-center justify-between pt-3 border-t border-white/5">
+            <div><p class="text-sm font-medium">💬 คำบรรยาย YouTube</p><p class="label mt-0.5">ซับไตเติลของวิดีโอบนจอหลัก</p></div>
+            <button id="ccBtn" onclick="toggleCC()">ปิด</button>
+          </div>
+        </div>
+      </details>
     </div>
 
     </div>
@@ -339,12 +366,15 @@ html.lite [class*="backdrop-blur"]{backdrop-filter:none!important;-webkit-backdr
           <p class="text-sm font-semibold text-amber-300">👑 แอดมิน</p>
           <button onclick="setMode('karaoke')" class="chip !py-1.5">🎤 กลับคาราโอเกะ</button>
         </div>
+        <p class="tvStatText text-[11px] text-slate-400 -mt-2"></p>
         <div id="qSecret" class="text-xs text-slate-300 break-words bg-black/30 rounded-xl p-3 leading-relaxed space-y-1"></div>
         <div class="flex gap-2">
           <button onclick="quizSwapHint()" class="chip !py-1.5">↔ สลับชื่อเพลง/ศิลปิน</button>
           <button onclick="quizEditRound()" class="chip !py-1.5">✎ แก้ชื่อเพลง/ศิลปิน</button>
         </div>
-        <div class="space-y-2">
+        <details id="qSettings" class="rounded-2xl bg-black/20 border border-white/5" open>
+          <summary class="sec-sum !p-3 !text-xs"><span id="qSetSum">⚙ ตั้งค่าเกม</span><span class="sec-arrow">▾</span></summary>
+        <div class="space-y-2 px-3 pb-3">
           <p class="label">จำนวนข้อ</p>
           <div class="seg">
             <button data-cfg="total" data-val="5" onclick="setQuizCfg('total',5)">5</button>
@@ -372,6 +402,7 @@ html.lite [class*="backdrop-blur"]{backdrop-filter:none!important;-webkit-backdr
             <button data-cfg="limit" data-val="90" onclick="setQuizCfg('limit',90)">90</button>
           </div>
         </div>
+        </details>
 
         <div class="space-y-2.5">
           <p class="label">เลือกเพลงที่จะทาย</p>
@@ -420,14 +451,17 @@ html.lite [class*="backdrop-blur"]{backdrop-filter:none!important;-webkit-backdr
           <button onclick="quizReveal()" class="py-3 rounded-2xl bg-emerald-600 font-bold text-sm">👁 เฉลย</button>
         </div>
         <div class="grid grid-cols-2 gap-2">
-          <button onclick="quizFinish()" class="chip">🏁 จบเกม / สรุปผล</button>
-          <button onclick="quizNewGame()" class="chip">🔁 เริ่มเกมใหม่</button>
-        </div>
-        <div class="grid grid-cols-3 gap-2">
           <button onclick="sfx('clap')" class="chip">👏 ปรบมือ</button>
           <button onclick="sfx('drum')" class="chip">🥁 กลองรัว</button>
-          <button onclick="quizResetScores()" class="chip !text-rose-400">🗑 ล้างคะแนน</button>
         </div>
+        <details class="rounded-2xl bg-black/20 border border-white/5">
+          <summary class="sec-sum !p-3 !text-xs"><span>⋯ อื่น ๆ (จบเกม · เริ่มใหม่ · ล้างคะแนน)</span><span class="sec-arrow">▾</span></summary>
+          <div class="grid grid-cols-3 gap-2 px-3 pb-3">
+            <button onclick="quizFinish()" class="chip">🏁 จบเกม</button>
+            <button onclick="quizNewGame()" class="chip">🔁 เริ่มเกมใหม่</button>
+            <button onclick="quizResetScores()" class="chip !text-rose-400">🗑 ล้างคะแนน</button>
+          </div>
+        </details>
         <div class="grid grid-cols-2 gap-2">
           <button onclick="volBy(-10)" class="chip">เสียงจอหลัก −</button>
           <button onclick="volBy(10)" class="chip">เสียงจอหลัก +</button>
@@ -459,6 +493,17 @@ html.lite [class*="backdrop-blur"]{backdrop-filter:none!important;-webkit-backdr
   </div>
 </div>
 
+<div id="qActionBar" class="hidden fixed bottom-0 inset-x-0 z-40 max-w-md mx-auto px-3" style="padding-bottom:calc(.5rem + var(--sab))">
+  <div class="glass rounded-3xl p-2 grid grid-cols-4 gap-2">
+    <button onclick="quizNext()" class="grad rounded-2xl py-3 text-xs font-bold leading-tight">▶<br>ถัดไป</button>
+    <button onclick="quizSkip()" class="rounded-2xl py-3 bg-slate-800 text-sky-300 text-xs font-bold leading-tight">⏭<br>ข้าม</button>
+    <button onclick="quizReveal()" class="rounded-2xl py-3 bg-emerald-600 text-xs font-bold leading-tight">👁<br>เฉลย</button>
+    <button onclick="quizPause()" class="rounded-2xl py-3 bg-slate-800 text-amber-300 text-xs font-bold leading-tight">⏸<br>พัก</button>
+  </div>
+</div>
+<div id="undoToast" class="hidden fixed bottom-28 left-1/2 -translate-x-1/2 z-[65] glass text-sm pl-5 pr-2 py-2 rounded-full shadow-2xl max-w-[92vw] flex items-center gap-3">
+  <span id="undoMsg"></span><button onclick="doUndo()" class="px-4 py-2 rounded-full bg-amber-400 text-slate-900 font-bold text-xs shrink-0">เลิกทำ</button>
+</div>
 <div id="settingsSheet" class="hidden fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-end justify-center" onclick="if(event.target===this)closeSettings()">
   <div class="w-full max-w-md bg-slate-900 border-t border-white/10 rounded-t-3xl p-5 pb-8 space-y-3">
     <div class="flex items-center justify-between"><p class="font-semibold">⚙ ตั้งค่า</p><button onclick="closeSettings()" class="ibtn !w-9 !h-9 !text-sm">✕</button></div>
@@ -648,7 +693,7 @@ onValue(reactionRef, snap => {
 let chartPool = [], autoUsed = new Set(), autoTimer = null, autoSkipTimer = null, autoToastShown = false;
 const CATS = [
   { k: 'top', label: '🔥 ท็อปชาร์ต' }, { k: 'tiktok', label: '📱 ฮิตในติ๊กตอก', q: 'เพลงในติ๊กตอก เพลงไวรัล TikTok ไทย' },
-  { k: 'd20', label: 'ยุค 2020', q: 'รวมเพลงไทย ปี 2020 2021 2022 2023' }, { k: 'd10', label: 'ยุค 2010', q: 'เพลงฮิต ยุค 2010 ไทย' }, { k: 'd00', label: 'ยุค 2000', q: 'เพลงฮิต ยุค 2000 ไทย' }, { k: 'd90', label: 'ยุค 90', q: 'เพลงฮิต ยุค 90 ไทย' }, { k: 'd80', label: 'ยุค 80', q: 'เพลงฮิต ยุค 80 ไทย' }, { k: 'old', label: 'เพลงเก่า/ลูกกรุง', q: 'เพลงเก่า ลูกกรุง ฮิต' },
+  { k: 'd20', label: 'ยุค 2020', q: 'รวมเพลงไทย ปี 2020 2021 2022 2023' }, { k: 'd10', label: 'ยุค 2010', q: 'เพลงฮิต ยุค 2010 ไทย' }, { k: 'd00', label: 'ยุค 2000', q: 'เพลงฮิต ยุค 2000 ไทย' }, { k: 'kami', label: '🎀 กามิกาเซ่', q: 'รวมเพลง Kamikaze กามิกาเซ่ โฟร์ มด มีล่า' }, { k: 'd90', label: 'ยุค 90', q: 'เพลงฮิต ยุค 90 ไทย' }, { k: 'd80', label: 'ยุค 80', q: 'เพลงฮิต ยุค 80 ไทย' }, { k: 'old', label: 'เพลงเก่า/ลูกกรุง', q: 'เพลงเก่า ลูกกรุง ฮิต' },
   { k: 'pop', label: 'ป๊อป', q: 'เพลงป๊อป ไทย ฮิต' }, { k: 'rock', label: 'ร็อก', q: 'เพลงร็อก ไทย ฮิต' }, { k: 'indie', label: 'อินดี้', q: 'เพลงอินดี้ ไทย ฮิต' }, { k: 'hip', label: 'ฮิปฮอป', q: 'เพลงฮิปฮอป แร็พ ไทย ฮิต' }, { k: 'lt', label: 'ลูกทุ่ง', q: 'เพลงลูกทุ่ง ฮิต' }, { k: 'molam', label: 'หมอลำ/อีสาน', q: 'หมอลำ เพลงอีสาน ฮิต' },
   { k: 'love', label: '💕 เพลงรัก', q: 'เพลงรัก ไทย โรแมนติก ฮิต' }, { k: 'slow', label: 'เพลงช้า', q: 'เพลงช้า เพลงเศร้า ไทย ฮิต' }, { k: 'dance', label: 'เพลงสนุก', q: 'เพลงสนุก เต้น ปาร์ตี้ ไทย' }, { k: 'acoustic', label: '🎸 อะคูสติก', q: 'เพลงอะคูสติก ไทย ฮิต' }, { k: 'drama', label: '📺 เพลงประกอบละคร', q: 'เพลงประกอบละคร ฮิต' },
   { k: 'kpop', label: '🇰🇷 K-POP', q: 'K-pop เพลงเกาหลี ฮิต' }, { k: 'kpop10', label: '🇰🇷 K-POP ยุคเก่า', q: 'K-pop เพลงเกาหลี ยุค 2010 ฮิต' }, { k: 'jpop', label: '🇯🇵 J-POP', q: 'J-pop เพลงญี่ปุ่น ฮิต' }, { k: 'anime', label: '🎌 อนิเมะ', q: 'เพลงอนิเมะ ฮิต anime songs' }, { k: 'cpop', label: '🇨🇳 จีน/ไต้หวัน', q: 'เพลงจีน ฮิต Mandopop' }, { k: 'int', label: 'สากล', q: 'เพลงสากล ฮิต' }, { k: 'uspop', label: '🇺🇸 สากลป๊อป', q: 'English pop hits US UK' }, { k: 'rnb', label: 'R&B / โซล', q: 'R&B soul hits' }, { k: 'edm', label: 'EDM', q: 'EDM dance hits' }, { k: 'latin', label: 'ลาติน', q: 'Latin pop reggaeton hits' }
@@ -1020,7 +1065,46 @@ function applyRes() {      // ความคมชัดวิดีโอบ�
   root.setAttribute('data-res', ui.res);
   const st = root.style; st.setProperty('--pw', d[0] + 'px'); st.setProperty('--ph', d[1] + 'px'); st.setProperty('--psx', innerWidth / d[0]); st.setProperty('--psy', innerHeight / d[1]);
 }
+window.applyPreset = k => guard(update(ref(db, `rooms/${roomId}/ui`), k === 'weak' ? { lite: true, res: '720' } : { lite: false, res: '1080' }));
 window.setUiRes = v => guard(update(ref(db, `rooms/${roomId}/ui`), { res: v }));
+let tvLast = '', tvAt = 0, tv = null, qSetState = null, undoFn = null, undoTimer;
+function tvState() {
+  if (!started) return 'wait';
+  if (mode === 'quiz') { const r = quiz.round; if (!r) return 'idle'; if (r.status === 'ready') return 'ready'; if (qType(r) === 'lyric' && r.status !== 'revealed') return 'playing'; }
+  else if (!currentSong) return 'idle';
+  let st = -2; try { st = player && player.getPlayerState ? player.getPlayerState() : -2; } catch {}
+  return st === 1 ? 'playing' : st === 2 ? 'paused' : st === 0 ? 'ended' : 'loading';
+}
+function pushTv(force) {      // จอทีวีรายงานสถานะให้มือถือ (เฉพาะตอนเปลี่ยน หรือทุก 8 วินาที)
+  if (!isMain) return;
+  const st = tvState(), key = st + '|' + mode + '|' + ui.lite + '|' + ui.res, now = Date.now();
+  if (!force && key === tvLast && now - tvAt < 8000) return;
+  tvLast = key; tvAt = now;
+  set(ref(db, `rooms/${roomId}/tv`), { t: srvNow(), st, mode, lite: !!ui.lite, res: ui.res }).catch(() => {});
+}
+if (isMain) setInterval(() => pushTv(false), 2000);
+function tvInfo() {
+  if (!tv || !tv.t) return { dot: '⚪', text: 'ยังไม่พบจอทีวีในห้องนี้ (เปิดหน้าจอหลักบนทีวีก่อน)' };
+  const age = srvNow() - tv.t;
+  if (age > 16000) return { dot: '🔴', text: `จอทีวีขาดการเชื่อมต่อ (ไม่มีสัญญาณ ${Math.round(age / 1000)} วิ)` };
+  const m = { wait: ['🟡', 'เปิดหน้าจอแล้ว แต่ยังไม่ได้กดเริ่มที่ทีวี'], playing: ['🟢', 'จอทีวีออนไลน์ · กำลังเล่น'], paused: ['⏸', 'จอทีวีออนไลน์ · พักเพลง'], loading: ['🔄', 'จอทีวีออนไลน์ · กำลังโหลดเพลง...'], ended: ['🟢', 'จอทีวีออนไลน์ · เพลงจบแล้ว'], idle: ['🟢', 'จอทีวีออนไลน์ · ว่าง'], ready: ['⏳', 'จอทีวีออนไลน์ · นับถอยหลังเริ่มข้อ'] }[tv.st] || ['🟢', 'จอทีวีออนไลน์'];
+  return { dot: m[0], text: m[1] };
+}
+function renderTvStatus() {
+  if (isMain) return;
+  const i = tvInfo(); document.querySelectorAll('.tvStatText').forEach(e => { e.textContent = i.dot + ' ' + i.text; });
+  const d = $('tvDot'); if (d) d.textContent = i.dot;
+}
+if (!isMain) { onValue(ref(db, `rooms/${roomId}/tv`), snap => { tv = snap.val(); renderTvStatus(); }, () => {}); setInterval(renderTvStatus, 3000); }
+function toastUndo(msg, fn) {      // ข้อความแจ้งพร้อมปุ่ม "เลิกทำ" (8 วินาที)
+  undoFn = fn; $('undoMsg').textContent = msg; $('undoToast').classList.remove('hidden');
+  clearTimeout(undoTimer); undoTimer = setTimeout(() => { undoFn = null; $('undoToast').classList.add('hidden'); }, 8000);
+}
+window.doUndo = () => { const f = undoFn; undoFn = null; clearTimeout(undoTimer); $('undoToast').classList.add('hidden'); if (f) { try { f(); } catch {} toast('เลิกทำแล้ว'); } };
+document.querySelectorAll('details[data-sec]').forEach(d => {      // จำว่าพับ/เปิดกลุ่มไหนไว้
+  try { const v = localStorage.getItem('karaokeSec:' + d.dataset.sec); if (v !== null) d.open = v === '1'; } catch {}
+  d.addEventListener('toggle', () => { try { localStorage.setItem('karaokeSec:' + d.dataset.sec, d.open ? '1' : '0'); } catch {} });
+});
 let qrCornerDone = false;
 function renderQrCorner() {      // QR ค้างมุมขวาล่าง ให้คนมาใหม่สแกนได้ตลอด (ปุ่ม Q บนคีย์บอร์ดก็สลับได้)
   if (!isMain) return;
@@ -1060,6 +1144,7 @@ function renderUiBtns() {
   if (isMain) return;
   $('uiQueueBtn').textContent = ui.showQueue ? 'เปิด' : 'ปิด'; $('uiQueueBtn').dataset.on = ui.showQueue ? '1' : '0';
   document.querySelectorAll('[data-res-btn]').forEach(b => { b.dataset.on = b.dataset.resBtn === ui.res ? '1' : '0'; });
+  { const pw = $('presetWeak'), pf = $('presetFull'); if (pw) pw.dataset.on = (ui.lite && ui.res === '720') ? '1' : '0'; if (pf) pf.dataset.on = (!ui.lite && ui.res === '1080') ? '1' : '0'; }
   $('uiLiteBtn').textContent = ui.lite ? 'เปิด' : 'ปิด'; $('uiLiteBtn').dataset.on = ui.lite ? '1' : '0';
   $('uiAutoBtn').textContent = ui.autoFill ? 'เปิด' : 'ปิด'; $('uiAutoBtn').dataset.on = ui.autoFill ? '1' : '0';
   $('uiQrBtn').textContent = ui.pinQR ? 'เปิด' : 'ปิด'; $('uiQrBtn').dataset.on = ui.pinQR ? '1' : '0';
@@ -1073,6 +1158,7 @@ onValue(ref(db, `rooms/${roomId}/mode`), snap => {
   const changed = !modeLoaded || m !== mode;
   mode = m; modeLoaded = true;
   document.documentElement.classList.toggle('qmode', mode === 'quiz');
+  { const ab = $('qActionBar'); if (ab && mode !== 'quiz') ab.classList.add('hidden'); }
   { const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = mode === 'quiz' ? '#050b1a' : '#0a0a12'; }
   if (isMain) {
     if (changed) applyMode();
@@ -1118,14 +1204,28 @@ function teamBoard(big) {
 }
 const teamTag = id => (teamsOn() && quiz.teams[id]) ? TEAMS[quiz.teams[id]].emoji + ' ' : '';
 function cleanTitle(t) { const c = String(t || '').replace(/[「『〈《].*?[」』〉》]/g, '').replace(/#\S+/g, '').replace(/[\(\[\{【（].*?[\)\]\}】）]/g, '').replace(/official\s*(mv|audio|video|lyrics?)?/ig, '').replace(/\s+/g, ' ').trim(); return c || String(t || ''); }
-function maskTitle(t, reveal) {      // ◯ แทนตัวอักษร (ไม่นับสระ/วรรณยุกต์ที่ซ้อน) เผยตัวแรกเมื่อ reveal
-  let out = '', shown = false;
-  for (const ch of t) {
-    if (/[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/.test(ch)) continue;
-    if (/[\s\-–—|\/.,'"&:]/.test(ch)) { out += ch; continue; }
-    if (reveal && !shown) { out += ch; shown = true; } else out += '◯';
+const THAI_LEAD = /[เแโใไ]/, THAI_TAIL = /[\u0E30-\u0E3A\u0E45-\u0E4E]/;
+function hintUnits(t) {      // แยกเป็นหน่วยตัวอักษร: พยัญชนะไทยรวมสระหน้า/สระ/วรรณยุกต์ไว้เป็นหน่วยเดียว · ช่องว่างและเครื่องหมายคงไว้
+  const out = []; let word = true;
+  for (const ch of String(t || '')) {
+    if (/[\s\-–—|\/.,'"&:!?()]/.test(ch)) { out.push({ sep: ch }); word = true; continue; }
+    const prev = out[out.length - 1];
+    if (THAI_TAIL.test(ch) && prev && prev.u !== undefined) { prev.u += ch; continue; }
+    if (prev && prev.lead) { prev.u += ch; prev.lead = false; continue; }
+    out.push({ u: ch, ws: word, lead: THAI_LEAD.test(ch) }); word = false;
   }
   return out;
+}
+function maskTitle(t, level) {      // ◯ แทนตัวอักษรที่ยังปิดอยู่ · level 0 ปิดหมด · 1 เปิดตัวแรกของทุกคำ · 2 เปิดเพิ่มประมาณ 1 ใน 3 · 3 เปิดประมาณครึ่ง (ไม่เกิน 60%)
+  const lv = level === true ? 1 : (level | 0), un = hintUnits(t), idx = [];
+  un.forEach((x, i) => { if (x.sep === undefined) idx.push(i); });
+  const n = idx.length, show = new Set(), step = lv >= 3 ? 2 : lv === 2 ? 3 : 0;
+  if (lv >= 1) idx.forEach(i => { if (un[i].ws) show.add(i); });
+  if (step) idx.forEach((i, k) => { if (k % step === 0) show.add(i); });
+  const cap = n <= 1 ? 0 : Math.max(1, Math.ceil(n * 0.6));
+  for (const i of [...idx].reverse()) { if (show.size <= cap) break; if (!un[i].ws) show.delete(i); }
+  for (const i of [...idx].reverse()) { if (show.size <= cap) break; show.delete(i); }
+  return un.map((x, i) => x.sep !== undefined ? x.sep : (show.has(i) ? x.u : '◯')).join('');
 }
 const normName = s => String(s || '').toLowerCase().replace(/[\s\-_.]/g, '');
 const hasThai = s => /[\u0E00-\u0E7F]/.test(s), latinOnly = s => !hasThai(s) && /[A-Za-z]/.test(s);
@@ -1161,18 +1261,23 @@ const hintSplitNote = r => {
   const tag = { match: '', topic: ' (ช่อง Topic)', channel: ' (ใช้ชื่อช่องเป็นศิลปิน เดา ตรวจดูด้วย)', guess: ' (เดาจากรูปแบบ ตรวจดูด้วย)', manual: ' (แอดมินแก้เอง)', unknown: '' }[h.how] || '';
   return h.known ? `  |  คำใบ้${tag}: ชื่อ="${h.title}" ศิลปิน="${h.artist}"` : '  |  ⚠ ไม่ทราบศิลปิน (ช่องเป็นค่ายเพลง) กด ✎ ใส่ชื่อศิลปิน หรือข้ามเพลง';
 };
-function quizHints(r) {      // คำใบ้ขึ้นตามเวลา: 25% / 50% ขึ้นชื่อแบบเว้นตัวอักษร / 75% เปิดตัวแรก
+function quizHints(r) {      // คำใบ้ขึ้นตามเวลา แล้วเปิดตัวอักษรเพิ่มทีละขั้น (ขั้นละประมาณ 15% ของเวลา)
   if (!r || !r.startAt) return [];
-  const lim = (r.limit || 60) * 1000, el = effNow() - r.startAt, out = [], hp = hintParts(r);
+  const lim = (r.limit || 60) * 1000, p = (effNow() - r.startAt) / lim, out = [], hp = hintParts(r);
+  const lv = th => p < th[0] ? -1 : p >= th[3] ? 3 : p >= th[2] ? 2 : p >= th[1] ? 1 : 0;
+  const TITLE = [0.20, 0.40, 0.70, 0.85], ARTIST = [0.35, 0.55, 0.78, 0.90], TITLE_LATE = [0.30, 0.50, 0.75, 0.88];      // [ขึ้น◯, เปิดตัวแรก, ขั้น 2, ขั้น 3] เป็นสัดส่วนของเวลาทั้งข้อ
   if (qType(r) === 'both') {
-    if (el >= lim * 0.25) out.push('🔤 ชื่อเพลง: ' + maskTitle(hp.title, el >= lim * 0.5));
-    if (hp.known && el >= lim * 0.5) out.push('🎤 ศิลปิน: ' + maskTitle(hp.artist, el >= lim * 0.75));
+    const a = lv(TITLE), b = lv(ARTIST);
+    if (a >= 0) out.push('🔤 ชื่อเพลง: ' + maskTitle(hp.title, a));
+    if (hp.known && b >= 0) out.push('🎤 ศิลปิน: ' + maskTitle(hp.artist, b));
   } else if (qType(r) === 'artist') {
-    if (el >= lim * 0.25) out.push('🎵 ชื่อเพลง: ' + hp.title);
-    if (hp.known && el >= lim * 0.5) out.push('🎤 ศิลปิน/ช่อง: ' + maskTitle(hp.artist, el >= lim * 0.75));
+    const b = lv(ARTIST);
+    if (p >= 0.25) out.push('🎵 ชื่อเพลง: ' + hp.title);
+    if (hp.known && b >= 0) out.push('🎤 ศิลปิน/ช่อง: ' + maskTitle(hp.artist, b));
   } else {
-    if (el >= lim * 0.25) out.push('📺 ศิลปิน/ช่อง: ' + (hp.known ? hp.artist : (r.channel || '-')));
-    if (el >= lim * 0.5) out.push('🔤 ชื่อเพลง: ' + maskTitle(hp.title, el >= lim * 0.75));
+    const a = lv(TITLE_LATE);
+    if (p >= 0.25) out.push('📺 ศิลปิน/ช่อง: ' + (hp.known ? hp.artist : (r.channel || '-')));
+    if (a >= 0) out.push('🔤 ชื่อเพลง: ' + maskTitle(hp.title, a));
   }
   return out;
 }
@@ -1807,6 +1912,10 @@ function renderQuizPhone() {
   const mine = quiz.buzz.findIndex(b => b.id === cid);
   $('qNameBox').classList.toggle('hidden', isAdmin);
   $('qAdmin').classList.toggle('hidden', !isAdmin);
+  $('qActionBar').classList.toggle('hidden', !isAdmin);
+  { const hasRound = !!r && !(quiz.game && quiz.game.over);      // เกมเริ่มแล้ว → พับการตั้งค่าเกมเก็บ (เปิดดูเองได้)
+    if (hasRound !== qSetState) { qSetState = hasRound; const d = $('qSettings'); if (d) d.open = !hasRound; }
+    const sm = $('qSetSum'); if (sm) sm.textContent = `⚙ ตั้งค่าเกม · ${qTotal() ? qTotal() + ' ข้อ' : 'ไม่จำกัด'} · ${QTYPES[gameType()]} · ${qLimit()} วิ${teamsOn() ? ' · 2 ทีม' : ''}`; }
   $('qPlayer').classList.toggle('hidden', isAdmin);
   const g = quiz.game || {}, tot = qTotal();
   const ty = qType(r), revLine = r ? (ty === 'artist' ? `${answerText(r)} (เพลง: ${hintParts(r).title})` : answerText(r)) : '';
@@ -1853,7 +1962,7 @@ function renderQuizPhone() {
       : (isAdmin ? `${ty === 'both' ? `<button onclick="quizJudge('${esc(b.id)}',2)" class="px-2.5 py-1 bg-emerald-600 rounded-lg text-xs">✓ ครบ +2</button><button onclick="quizJudge('${esc(b.id)}',1)" class="px-2.5 py-1 bg-amber-600 rounded-lg text-xs">½ +1</button>` : `<button onclick="quizJudge('${esc(b.id)}',1)" class="px-2.5 py-1 bg-emerald-600 rounded-lg text-xs">✓ +1</button>`}<button onclick="quizJudge('${esc(b.id)}',-1)" class="px-2.5 py-1 bg-rose-600 rounded-lg text-xs">✕ ผิด</button>` : '')}</div>`).join('')
     : '<p class="text-xs text-slate-600">ยังไม่มีคนกด</p>';
   const scoreRows = (() => { if (!isAdmin) return quiz.scores; const m = new Map(quiz.scores.map(p => [p.id, p])); livePlayers().forEach(([id, p]) => { if (!m.has(id)) m.set(id, { id, name: p.name, score: 0 }); }); return [...m.values()].sort((a, b) => b.score - a.score); })();
-  $('qScores').innerHTML = teamBoard() + (scoreRows.length ? scoreRows.map((p, i) => `<div class="flex items-center gap-2 p-2 rounded-xl bg-slate-900 border border-slate-800 text-sm"><span class="text-base truncate min-w-0 flex-1">${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${teamTag(p.id)}${esc(p.name)}</span>${isAdmin ? `<button onclick="quizAdjust('${esc(p.id)}',-1)" class="w-8 h-8 rounded-lg bg-rose-600/80 font-bold">−</button>` : ''}<span class="font-black text-xl text-amber-300 min-w-[2rem] text-center">${p.score}</span>${isAdmin ? `<button onclick="quizAdjust('${esc(p.id)}',1)" class="w-8 h-8 rounded-lg bg-emerald-600 font-bold">+</button><button onclick="quizAdjustCustom('${esc(p.id)}')" class="w-8 h-8 rounded-lg bg-slate-700 text-xs" aria-label="ใส่จำนวนเอง">✎</button>` : ''}</div>`).join('') : '<p class="text-xs text-slate-600">ยังไม่มีคะแนน</p>');
+  $('qScores').innerHTML = teamBoard() + (scoreRows.length ? scoreRows.map((p, i) => `<div class="flex items-center gap-2 p-2 rounded-xl bg-slate-900 border border-slate-800 text-sm"><span class="text-base truncate min-w-0 flex-1">${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'} ${teamTag(p.id)}${esc(p.name)}</span>${isAdmin ? `<button onclick="quizAdjust('${esc(p.id)}',-1)" class="w-10 h-10 rounded-lg bg-rose-600/80 font-bold">−</button>` : ''}<span class="font-black text-xl text-amber-300 min-w-[2rem] text-center">${p.score}</span>${isAdmin ? `<button onclick="quizAdjust('${esc(p.id)}',1)" class="w-10 h-10 rounded-lg bg-emerald-600 font-bold">+</button><button onclick="quizAdjustCustom('${esc(p.id)}')" class="w-10 h-10 rounded-lg bg-slate-700 text-xs" aria-label="ใส่จำนวนเอง">✎</button>` : ''}</div>`).join('') : '<p class="text-xs text-slate-600">ยังไม่มีคะแนน</p>');
 }
 
 window.buzz = () => {
@@ -2052,7 +2161,10 @@ window.shareImage = async () => {
   } catch (e) { if (!e || e.name !== 'AbortError') saveImage(); }
 };
 window.closeShare = () => $('shareModal').classList.add('hidden');
-window.prepRemove = id => guard(remove(ref(db, `rooms/${roomId}/quiz/prep/${id}`)));
+window.prepRemove = id => {
+  const it = quiz.prep.find(x => x.id === id); guard(remove(ref(db, `rooms/${roomId}/quiz/prep/${id}`)));
+  if (it) { const { id: _i, ...data } = it; toastUndo('ลบเพลงที่เตรียมไว้แล้ว', () => guard(set(ref(db, `rooms/${roomId}/quiz/prep/${id}`), data))); }
+};
 window.prepUp = id => { const f = quiz.prep[0]; if (f && f.id !== id) guard(set(ref(db, `rooms/${roomId}/quiz/prep/${id}/ts`), (f.ts || Date.now()) - 1)); };
 window.prepFillRandom = async () => {
   if (quiz.adminId !== cid) return;
@@ -2067,12 +2179,18 @@ function renderPrepList() {
   $('prepCount').textContent = quiz.prep.length;
   el.innerHTML = quiz.prep.length ? quiz.prep.map((p, i) => {
     const ho = p.ho || (libCache.q && libCache.q.items[p.vid] && libCache.q.items[p.vid].ho) || null, h = hintParts({ title: p.title, channel: p.channel, ho });
-    return `<div class="flex items-center gap-2 p-2 rounded-xl bg-slate-950 border border-slate-800"><span class="w-5 text-center text-xs font-bold text-slate-500">${i + 1}</span><img src="${thumb(p.vid)}" class="w-14 aspect-video object-cover rounded"><div class="flex-1 min-w-0"><p class="text-xs line-clamp-2">${p.type === 'lyric' ? '📝 ' : p.type === 'both' ? '🎶 ' : p.type === 'artist' ? '🎤 ' : ''}${esc(p.title)}</p><p class="text-[10px] text-sky-300 truncate">🎵 ${esc(h.title)} · 🎤 ${h.known ? esc(h.artist) : '⚠ ไม่ทราบ'}${ho && ho.title ? ' ✓' : ''}</p></div><div class="flex flex-col gap-1">${i > 0 ? `<button onclick="prepUp('${esc(p.id)}')" class="px-2 py-0.5 bg-slate-800 rounded text-[10px]">ขึ้นก่อน</button>` : ''}<button onclick="prepEdit('${esc(p.id)}')" class="px-2 py-0.5 bg-slate-800 text-amber-300 rounded text-[10px]">✎ แก้</button><button onclick="prepRemove('${esc(p.id)}')" class="px-2 py-0.5 bg-slate-800 text-red-400 rounded text-[10px]">ลบ</button></div></div>`;
+    return `<div class="flex items-center gap-2 p-2 rounded-xl bg-slate-950 border border-slate-800"><span class="w-5 text-center text-xs font-bold text-slate-500">${i + 1}</span><img src="${thumb(p.vid)}" class="w-14 aspect-video object-cover rounded"><div class="flex-1 min-w-0"><p class="text-xs line-clamp-2">${p.type === 'lyric' ? '📝 ' : p.type === 'both' ? '🎶 ' : p.type === 'artist' ? '🎤 ' : ''}${esc(p.title)}</p><p class="text-[10px] text-sky-300 truncate">🎵 ${esc(h.title)} · 🎤 ${h.known ? esc(h.artist) : '⚠ ไม่ทราบ'}${ho && ho.title ? ' ✓' : ''}</p></div><div class="flex flex-col gap-1">${i > 0 ? `<button onclick="prepUp('${esc(p.id)}')" class="px-3 min-h-[34px] bg-slate-800 rounded-lg text-xs">ขึ้นก่อน</button>` : ''}<button onclick="prepEdit('${esc(p.id)}')" class="px-3 min-h-[34px] bg-slate-800 text-amber-300 rounded-lg text-xs">✎ แก้</button><button onclick="prepRemove('${esc(p.id)}')" class="px-3 min-h-[34px] bg-slate-800 text-red-400 rounded-lg text-xs">ลบ</button></div></div>`;
   }).join('') : '<p class="text-xs text-slate-500 text-center py-2">ยังไม่มีข้อที่เตรียมไว้</p>';
 }
 window.setQuizCfg = (k, v) => { if (quiz.adminId === cid) guard(update(ref(db, `rooms/${roomId}/quiz/game`), { [k]: v })); };
 window.quizFinish = () => { if (quiz.adminId === cid) guard(update(ref(db, `rooms/${roomId}/quiz/game`), { over: true })); };
-window.quizNewGame = () => { if (quiz.adminId !== cid || !confirm('เริ่มเกมใหม่? ข้อและคะแนนทั้งหมดจะถูกล้าง')) return; guard(update(ref(db, `rooms/${roomId}/quiz`), { round: null, buzz: null, scores: null, teamScores: null, 'game/over': false, 'game/paused': false, 'game/carryNo': null })); };
+window.quizNewGame = () => {
+  if (quiz.adminId !== cid) return;
+  const g = quiz.game || {}, sc = Object.fromEntries(quiz.scores.map(p => [p.id, { name: p.name, score: p.score }])), ts = Object.keys(quiz.teamScores || {}).length ? { ...quiz.teamScores } : null;
+  const snap = { round: quiz.round || null, over: !!g.over, paused: !!g.paused, carry: g.carryNo || null };
+  guard(update(ref(db, `rooms/${roomId}/quiz`), { round: null, buzz: null, scores: null, teamScores: null, 'game/over': false, 'game/paused': false, 'game/carryNo': null }));
+  toastUndo('เริ่มเกมใหม่แล้ว (ล้างข้อและคะแนน)', () => guard(update(ref(db, `rooms/${roomId}/quiz`), { round: snap.round, scores: Object.keys(sc).length ? sc : null, teamScores: ts, 'game/over': snap.over, 'game/paused': snap.paused, 'game/carryNo': snap.carry })));
+};
 window.quizReveal = () => { if (quiz.adminId === cid && quiz.round && quiz.round.status === 'ready') return toast('รอเพลงเริ่มก่อน'); if (quiz.adminId === cid && quiz.round) guard(update(ref(db, `rooms/${roomId}/quiz/round`), { status: 'revealed' })); };
 function saveHintOverride(ho) {      // แก้ชื่อ/ศิลปินของข้อนี้ + จำไว้ในคลังเพื่อให้ครั้งหน้าถูกเอง
   const r = quiz.round; if (!r) return;
@@ -2147,7 +2265,12 @@ window.quizAdjustCustom = pid => {
   quizAdjust(pid, v);
 };
 window.quizResetBuzz = () => { if (quiz.adminId === cid) clearBuzzResume(); };
-window.quizResetScores = () => { if (quiz.adminId === cid && confirm('ล้างคะแนนทั้งหมด?')) guard(update(ref(db, `rooms/${roomId}/quiz`), { scores: null, teamScores: null })); };
+window.quizResetScores = () => {
+  if (quiz.adminId !== cid) return;
+  const sc = Object.fromEntries(quiz.scores.map(p => [p.id, { name: p.name, score: p.score }])), ts = Object.keys(quiz.teamScores || {}).length ? { ...quiz.teamScores } : null;
+  guard(update(ref(db, `rooms/${roomId}/quiz`), { scores: null, teamScores: null }));
+  toastUndo('ล้างคะแนนแล้ว', () => guard(update(ref(db, `rooms/${roomId}/quiz`), { scores: Object.keys(sc).length ? sc : null, teamScores: ts })));
+};
 window.quizJudge = (pid, d) => {
   if (quiz.adminId !== cid) return;
   const b = quiz.buzz.find(x => x.id === pid); if (!b || b.judged) return;
