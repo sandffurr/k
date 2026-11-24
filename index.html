@@ -1266,18 +1266,18 @@ function quizHints(r) {      // คำใบ้ขึ้นตามเวลา
   if (!r || !r.startAt) return [];
   const lim = (r.limit || 60) * 1000, p = (effNow() - r.startAt) / lim, out = [], hp = hintParts(r);
   const lv = th => p < th[0] ? -1 : p >= th[3] ? 3 : p >= th[2] ? 2 : p >= th[1] ? 1 : 0;
-  const TITLE = [0.20, 0.40, 0.70, 0.85], ARTIST = [0.35, 0.55, 0.78, 0.90], TITLE_LATE = [0.30, 0.50, 0.75, 0.88];      // [ขึ้น◯, เปิดตัวแรก, ขั้น 2, ขั้น 3] เป็นสัดส่วนของเวลาทั้งข้อ
+  const TITLE = [0.30, 0.50, 0.75, 0.88], ARTIST = [0.45, 0.62, 0.82, 0.90], TITLE_LATE = [0.40, 0.58, 0.80, 0.90];      // [ขึ้น◯, เปิดตัวแรก, ขั้น 2, ขั้น 3] เป็นสัดส่วนของเวลาทั้งข้อ
   if (qType(r) === 'both') {
     const a = lv(TITLE), b = lv(ARTIST);
     if (a >= 0) out.push('🔤 ชื่อเพลง: ' + maskTitle(hp.title, a));
     if (hp.known && b >= 0) out.push('🎤 ศิลปิน: ' + maskTitle(hp.artist, b));
   } else if (qType(r) === 'artist') {
     const b = lv(ARTIST);
-    if (p >= 0.25) out.push('🎵 ชื่อเพลง: ' + hp.title);
+    if (p >= 0.35) out.push('🎵 ชื่อเพลง: ' + hp.title);
     if (hp.known && b >= 0) out.push('🎤 ศิลปิน/ช่อง: ' + maskTitle(hp.artist, b));
   } else {
     const a = lv(TITLE_LATE);
-    if (p >= 0.25) out.push('📺 ศิลปิน/ช่อง: ' + (hp.known ? hp.artist : (r.channel || '-')));
+    if (p >= 0.35) out.push('📺 ศิลปิน/ช่อง: ' + (hp.known ? hp.artist : (r.channel || '-')));
     if (a >= 0) out.push('🔤 ชื่อเพลง: ' + maskTitle(hp.title, a));
   }
   return out;
