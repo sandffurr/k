@@ -1109,7 +1109,8 @@ let qrCornerDone = false;
 function renderQrCorner() {      // QR ค้างมุมขวาล่าง ให้คนมาใหม่สแกนได้ตลอด (ปุ่ม Q บนคีย์บอร์ดก็สลับได้)
   if (!isMain) return;
   const idleVisible = !(started && !peek && (mode === 'quiz' || !!currentSong));
-  const on = ui.pinQR && started && !idleVisible && !(mode === 'quiz' && !quiz.round);
+  const quizCoverOn = mode === 'quiz' && !(quiz.round && quiz.round.status === 'revealed');      // ทายเพลง: หน้าปกมี QR ของตัวเองอยู่แล้ว (ใหญ่ตอนรอ/เล็กตอนทาย) ไม่ต้องมี QR มุมจอซ้ำ
+  const on = ui.pinQR && started && !idleVisible && !quizCoverOn;
   $('qrCorner').classList.toggle('hidden', !on);
   if (on && !qrCornerDone) {
     qrCornerDone = true;
